@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <!-- Dynamic network bridge arc -->
+  <path d="M6 34 C 14 20, 34 20, 42 34" stroke="#2D6A4F" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.5 0"/>
+  <path d="M10 38 C 18 26, 30 26, 38 38" stroke="#52B788" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  
+  <!-- Foundation pillars/piers -->
+  <path d="M12 36 L12 42" stroke="#6C584C" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M24 33 L24 43" stroke="#6C584C" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M36 36 L36 42" stroke="#6C584C" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M8 43 L40 43" stroke="#40916C" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Network Nodes (symbolizing 5 cooperating BRICS hubs) -->
+  <circle cx="8" cy="32" r="3" fill="#2D6A4F" stroke="#FFFFFF" stroke-width="1.5"/>
+  <circle cx="16" cy="23" r="3" fill="#0077B6" stroke="#FFFFFF" stroke-width="1.5"/>
+  <circle cx="24" cy="20" r="3.5" fill="#E76F51" stroke="#FFFFFF" stroke-width="1.5"/>
+  <circle cx="32" cy="23" r="3" fill="#D4A373" stroke="#FFFFFF" stroke-width="1.5"/>
+  <circle cx="40" cy="32" r="3" fill="#52B788" stroke="#FFFFFF" stroke-width="1.5"/>
+
+  <!-- Data Pulse Connection Lines -->
+  <path d="M8 32 L16 23 L24 20 L32 23 L40 32" stroke="#B7E4C7" stroke-width="1" stroke-dasharray="2 2"/>
+
+  <!-- Sprouting Crop Leaf Motif atop the bridge -->
+  <path d="M24 20 C 21 14, 17 11, 14 12 C 14 17, 19 20, 24 20 Z" fill="#40916C"/>
+  <path d="M24 20 C 27 13, 33 10, 35 11 C 36 17, 29 20, 24 20 Z" fill="#74C69D"/>
+  <path d="M24 20 C 24 11, 23 6, 24 5 C 25 6, 26 11, 24 20 Z" fill="#95D5B2"/>
+  <circle cx="24" cy="6" r="1.5" fill="#E9C46A"/>
+</svg>

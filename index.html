@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  
+  <title>AgriBridge — BRICS AI Agriculture Network</title>
+  <meta name="description" content="AI-powered climate-resilient farming network for smallholder farmers, combining satellite telemetry, soil sensing, weather forecasting, disease diagnosis, and BRICS agricultural data cooperation." />
+  <meta name="keywords" content="AgriBridge, BRICS, Agriculture, AI Farming, Groundnut, Kurnool, Telugu Agriculture, Remote Sensing, Soil Moisture" />
+  <meta name="theme-color" content="#1b4332" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="./src/assets/logo.svg" />
+
+  <!-- Google Fonts: Inter & Noto Sans Telugu for authentic typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Telugu:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./src/styles/variables.css" />
+  <link rel="stylesheet" href="./src/styles/base.css" />
+  <link rel="stylesheet" href="./src/styles/layout.css" />
+  <link rel="stylesheet" href="./src/styles/components.css" />
+</head>
+<body>
+  <!-- Accessible single top-level heading for screen readers -->
+  <h1 class="sr-only">AgriBridge — BRICS AI Agriculture Network Dashboard</h1>
+
+  <div class="app-shell">
+    <!-- Desktop Sidebar Navigation -->
+    <aside id="app-sidebar" class="sidebar" aria-label="Sidebar Navigation"></aside>
+
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+    <!-- Main Application Wrapper -->
+    <div class="main-wrapper">
+      <!-- Top Application Header -->
+      <div id="app-header"></div>
+
+      <!-- Main Page Content Viewport -->
+      <main id="main-content" class="content-area" role="main"></main>
+    </div>
+  </div>
+
+  <!-- Mobile Android Bottom Navigation Bar -->
+  <div id="app-mobile-nav"></div>
+
+  <!-- App Bootstrap Module -->
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgriNAdvisorySchema",
+  "description": "Standardized schema for interoperable agricultural advisory exchange across BRICS member networks.",
+  "type": "object",
+  "required": ["soil_type", "weather", "season"],
+  "properties": {
+    "soil_type": {
+      "type": "string",
+      "description": "Soil texture class or classification",
+      "enum": ["sandy", "clay", "loam", "silt", "black", "red", "alluvial", "shallow", "saline"]
+    },
+    "weather": {
+      "type": "string",
+      "description": "Observed or forecasted weather profile",
+      "enum": ["dry", "wet", "moderate", "cool", "cold", "hot", "semi_arid", "drought", "humid"]
+    },
+    "season": {
+      "type": "string",
+      "description": "Crop production season",
+      "enum": ["kharif", "rabi", "zaid", "monsoon", "winter", "summer"]
+    },
+    "location": {
+      "type": "string",
+      "description": "Geographical region or administrative boundary"
+    },
+    "coordinates": {
+      "type": "object",
+      "properties": {
+        "latitude": { "type": "number", "minimum": -90.0, "maximum": 90.0 },
+        "longitude": { "type": "number", "minimum": -180.0, "maximum": 180.0 }
+      },
+      "required": ["latitude", "longitude"]
+    }
+  }
+}
