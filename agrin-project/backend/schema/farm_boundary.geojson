@@ -1,0 +1,26 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kurnool Agricultural Zone & Farm Perimeter",
+        "district": "Kurnool",
+        "state": "Andhra Pradesh",
+        "country": "India",
+        "crop": "Groundnut",
+        "soil": "Red loamy soil",
+        "centroid": [78.1526, 15.8192]
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.99469, 16.074847],
+          [77.563477, 15.683865],
+          [78.376465, 15.530437],
+          [78.675842, 15.987734]
+        ]
+      }
+    }
+  ]
+}

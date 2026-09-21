@@ -25,7 +25,7 @@ def get_weather_data():
             "status": "error",
             "error_code": "MISSING_COORDINATES",
             "message": "Both 'lat' and 'lon' query parameters are required.",
-            "example": "/api/weather-data?lat=17.3850&lon=78.4867"
+            "example": "/api/weather-data?lat=15.8192&lon=78.1526"
         }), 400
 
     try:
