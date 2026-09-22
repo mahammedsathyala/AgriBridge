@@ -28,6 +28,24 @@ export const bricsService = {
     const target = bricsCountries.find(c => c.code === targetCode) || bricsCountries[1];
 
     const payload = sampleDataExchangePayload(source, target, indicator);
+
+    // Persist to backend SQLite DB DataExchangeLog audit table
+    try {
+      await fetch('http://localhost:5000/api/brics/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_node: source.name,
+          target_node: target.name,
+          indicator: indicator,
+          payload: payload
+        }),
+        signal: AbortSignal.timeout(3000)
+      });
+    } catch (e) {
+      console.warn("Backend CADS exchange logging failed (offline fallback):", e);
+    }
+
     return {
       success: true,
       source,

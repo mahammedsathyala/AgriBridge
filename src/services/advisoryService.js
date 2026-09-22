@@ -51,6 +51,34 @@ export const advisoryService = {
       // Graceful fallback to mock data
     }
 
+    // Sync completion states and records with backend SQLite DB
+    try {
+      const histRes = await fetch(`${API_BASE}/api/advisory/history`, {
+        signal: AbortSignal.timeout(2500)
+      });
+      if (histRes.ok) {
+        const histData = await histRes.json();
+        if (Array.isArray(histData?.advisories)) {
+          const dbCompleted = histData.advisories
+            .filter(a => a.completed)
+            .map(a => `adv-${String(a.id).padStart(3, '0')}`);
+          
+          let storedCompleted = [];
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) storedCompleted = JSON.parse(stored);
+          } catch {}
+          
+          const mergedCompleted = Array.from(new Set([...storedCompleted, ...dbCompleted]));
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedCompleted));
+          } catch {}
+        }
+      }
+    } catch (e) {
+      // Backend unavailable; offline fallback to localStorage
+    }
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -78,15 +106,29 @@ export const advisoryService = {
     } catch (e) {}
 
     const index = completedIds.indexOf(id);
+    const isCompletedNow = index === -1;
     if (index > -1) {
       completedIds.splice(index, 1);
     } else {
       completedIds.push(id);
     }
 
+    // 1. Persist immediately to localStorage
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(completedIds));
     } catch (e) {}
+
+    // 2. Persist completion state to backend SQLite DB
+    try {
+      await fetch(`${API_BASE}/api/advisory/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, completed: isCompletedNow }),
+        signal: AbortSignal.timeout(3000)
+      });
+    } catch (e) {
+      console.warn("Backend advisory completion sync failed, state preserved locally:", e);
+    }
 
     return this.getAdvisories();
   },

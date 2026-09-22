@@ -83,7 +83,7 @@ class DiseaseDiagnosisEngine:
 
     def __init__(self, model_path: Optional[str] = None):
         self.model_path = model_path or os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "models", "yolov8_crop_disease.pt"
+            os.path.dirname(os.path.dirname(__file__)), "model_weights", "yolov8_crop_disease.pt"
         )
         self.model = None
         self.is_real_weights = False

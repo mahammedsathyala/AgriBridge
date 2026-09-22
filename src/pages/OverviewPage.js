@@ -7,11 +7,92 @@ import { showToast } from '../components/Toast.js';
 import { farmService } from '../services/farmService.js';
 import { weatherService } from '../services/weatherService.js';
 
+// ---------------------------------------------------------------------------
+// Kolkata live-clock helpers
+// ---------------------------------------------------------------------------
+
+/** Returns the current time parts in Asia/Kolkata timezone. */
+function getKolkataTimeParts() {
+  const now = new Date();
+  const kolkata = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = kolkata.formatToParts(now);
+  const get = (type) => parts.find(p => p.type === type)?.value ?? '00';
+  return {
+    hour: parseInt(get('hour'), 10),
+    minute: get('minute'),
+    second: get('second'),
+    rawHour: get('hour'),
+  };
+}
+
+/** Returns the i18n greeting key for the current Kolkata hour. */
+function getGreetingKey(hour) {
+  if (hour >= 5  && hour < 12) return 'overview.greetingMorning';
+  if (hour >= 12 && hour < 17) return 'overview.greetingAfternoon';
+  if (hour >= 17 && hour < 21) return 'overview.greetingEvening';
+  return 'overview.greetingNight';
+}
+
+/** Returns the current date formatted in Indian locale for Asia/Kolkata. */
+function getKolkataDateString() {
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date());
+}
+
+/**
+ * Starts a 1-second interval that updates the live greeting/clock/date
+ * elements inside `container`. Returns a cleanup function.
+ */
+function startLiveClock(container) {
+  let lastPeriodKey = null;
+
+  function tick() {
+    const { hour, minute, second, rawHour } = getKolkataTimeParts();
+    const periodKey = getGreetingKey(hour);
+
+    // Update greeting text (and farmerName) only when the period changes
+    const greetingEl = container.querySelector('#live-greeting-text');
+    if (greetingEl && periodKey !== lastPeriodKey) {
+      greetingEl.textContent = `${t(periodKey)}, ${t('overview.farmerName')}`;
+      lastPeriodKey = periodKey;
+    }
+
+    // Update clock
+    const clockEl = container.querySelector('#live-clock');
+    if (clockEl) {
+      const displayHour = rawHour === '24' ? '00' : rawHour.padStart(2, '0');
+      clockEl.textContent = `${displayHour}:${minute}:${second}`;
+    }
+
+    // Update date (changes at midnight — cheap to set every second)
+    const dateEl = container.querySelector('#live-date');
+    if (dateEl) {
+      dateEl.textContent = getKolkataDateString();
+    }
+  }
+
+  tick(); // run immediately
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id);
+}
+
 export function renderOverviewPage(container, { farm, weather, onNavigate }) {
   let currentFarm = farm;
   let currentWeather = weather || {};
   let loadError = null;
   let isLoading = !farm;
+  let stopClock = null; // cleanup handle for live clock interval
 
   async function reloadOverview() {
     isLoading = true;
@@ -27,7 +108,7 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
       loadError = "Couldn't reach live telemetry server — showing last known values";
     } finally {
       isLoading = false;
-      render();
+      doRender();
     }
   }
 
@@ -102,7 +183,12 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
       <!-- Welcome Card -->
       <div class="welcome-banner">
         <div>
-          <div class="welcome-title">${t('overview.greeting')}</div>
+          <div class="welcome-title" id="live-greeting-text"></div>
+          <!-- Live clock & date — aria-live so screen readers announce time changes politely -->
+          <div class="welcome-clock-area" aria-live="polite" aria-label="${t('overview.greetingClockLabel')}">
+            <span class="welcome-clock" id="live-clock"></span>
+            <span class="welcome-date" id="live-date"></span>
+          </div>
           <div class="welcome-desc">${t('overview.greetingSub')}</div>
 
           <div class="welcome-meta-chips">
@@ -361,5 +447,15 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
     });
   }
 
-  render();
+  function doRender() {
+    // Stop any running clock before wiping innerHTML
+    if (stopClock) { stopClock(); stopClock = null; }
+    render();
+    // Start live clock after render populates the DOM
+    if (!isLoading && currentFarm) {
+      stopClock = startLiveClock(container);
+    }
+  }
+
+  doRender();
 }

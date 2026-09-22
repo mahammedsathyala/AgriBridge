@@ -19,8 +19,14 @@ export const en = {
 
   // Dashboard Overview
   overview: {
-    greeting: "Good evening, Farmer",
-    greetingSub: "Your farm is moderately healthy. Rainfall is expected in 3 days. Review today’s recommendations before irrigation.",
+    greetingMorning: "Good morning",
+    greetingAfternoon: "Good afternoon",
+    greetingEvening: "Good evening",
+    greetingNight: "Good night",
+    farmerName: "Sathyala Farmer",
+    greetingClockLabel: "Local time",
+    greetingDateLabel: "Today",
+    greetingSub: "Your farm is moderately healthy. Rainfall is expected in 3 days. Review today's recommendations before irrigation.",
     areaLabel: "Farm Area",
     cropLabel: "Crop",
     cropAgeLabel: "Crop Age",

@@ -19,7 +19,13 @@ export const hi = {
 
   // Dashboard Overview
   overview: {
-    greeting: "नमस्ते, किसान भाई",
+    greetingMorning: "सुप्रभात",
+    greetingAfternoon: "नमस्ते",
+    greetingEvening: "शुभ संध्या",
+    greetingNight: "शुभ रात्रि",
+    farmerName: "सत्याला किसान",
+    greetingClockLabel: "स्थानीय समय",
+    greetingDateLabel: "आज",
     greetingSub: "आपके खेत की स्थिति मध्यम रूप से स्वस्थ है। 3 दिनों में वर्षा की संभावना है। सिंचाई से पहले आज की सिफ़ारिशें देखें।",
     areaLabel: "खेत का क्षेत्रफल",
     cropLabel: "फसल",

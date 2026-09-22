@@ -24,8 +24,15 @@ class Config:
     
     # Paths
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    MODELS_DIR = os.path.join(BASE_DIR, "models")
+    MODELS_DIR = os.path.join(BASE_DIR, "model_weights")
     SCHEMA_DIR = os.path.join(BASE_DIR, "schema")
+    
+    # Database configuration (SQLite via Flask-SQLAlchemy)
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        f"sqlite:///{os.path.join(BASE_DIR, 'agrin.db')}"
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Model config
     YOLO_MODEL_PATH = os.path.join(MODELS_DIR, "yolov8_crop_disease.pt")

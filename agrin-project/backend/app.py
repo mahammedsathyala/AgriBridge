@@ -13,7 +13,8 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from flask import Flask, jsonify
 from flask_cors import CORS
 from config import Config
-from routes import advisory_bp, diagnose_bp, soil_data_bp, weather_data_bp, localize_bp
+from models import db, FarmProfile
+from routes import farm_bp, advisory_bp, diagnose_bp, soil_data_bp, weather_data_bp, localize_bp, exchange_bp
 
 
 def create_app(config_class=Config) -> Flask:
@@ -21,15 +22,40 @@ def create_app(config_class=Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Initialize SQLite Database
+    db.init_app(app)
+
     # Enable Cross-Origin Resource Sharing for frontend/mobile clients
     CORS(app)
 
+    # Initialize tables and seed default farm profile on first run
+    with app.app_context():
+        db.create_all()
+        if not FarmProfile.query.first():
+            default_farm = FarmProfile(
+                farmer_name="Sathyala Farmer",
+                farm_name="Sathyala Farm",
+                location="Kurnool, Andhra Pradesh",
+                lat=15.8281,
+                lng=78.0373,
+                area_acres=2.5,
+                crop="Groundnut",
+                crop_variety="K6 (Kadiri-6)",
+                sowing_date="2026-08-07",
+                soil_type="Red loamy soil",
+                irrigation_type="Borewell drip"
+            )
+            db.session.add(default_farm)
+            db.session.commit()
+
     # Register blueprints
+    app.register_blueprint(farm_bp)
     app.register_blueprint(advisory_bp)
     app.register_blueprint(weather_data_bp)
     app.register_blueprint(soil_data_bp)
     app.register_blueprint(diagnose_bp)
     app.register_blueprint(localize_bp)
+    app.register_blueprint(exchange_bp)
 
     @app.route("/", methods=["GET"])
     def index():

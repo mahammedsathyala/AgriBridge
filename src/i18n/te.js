@@ -19,7 +19,13 @@ export const te = {
 
   // Dashboard Overview
   overview: {
-    greeting: "శుభ సాయంత్రం, రైతు గారు",
+    greetingMorning: "శుభోదయం",
+    greetingAfternoon: "శుభ మధ్యాహ్నం",
+    greetingEvening: "శుభ సాయంత్రం",
+    greetingNight: "శుభ రాత్రి",
+    farmerName: "సత్యాల రైతు",
+    greetingClockLabel: "స్థానిక సమయం",
+    greetingDateLabel: "నేడు",
     greetingSub: "మీ పొలం మధ్యస్థ ఆరోగ్యంతో ఉంది. 3 రోజుల్లో వర్షం కురిసే అవకాశం ఉంది. నీరు పెట్టే ముందు నేటి సలహాలను సమీక్షించండి.",
     areaLabel: "పొలం విస్తీర్ణం",
     cropLabel: "పంట",

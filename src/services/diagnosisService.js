@@ -79,6 +79,35 @@ export const diagnosisService = {
 
   async getHistory() {
     try {
+      const res = await fetch(`${API_BASE}/api/diagnose/history`, {
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.history) && data.history.length > 0) {
+          const mapped = data.history.map(r => ({
+            id: r.id ? `SCAN-${r.id}` : (r.image_ref || "SCAN-000"),
+            date: r.created_at ? r.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            crop: r.crop || "Groundnut",
+            cropTe: r.crop === "Groundnut" ? "వేరుశనగ" : r.crop,
+            diagnosis: r.disease,
+            diagnosisTe: r.disease,
+            confidence: `${Math.round(r.confidence || 0)}%`,
+            status: "Treatment Advised",
+            statusTe: "చికిత్స సూచించబడింది",
+            imageUrl: r.image_ref && !r.image_ref.startsWith('http') ? `./src/assets/${r.image_ref}` : (r.image_ref || "./src/assets/sample_leaf.jpg")
+          }));
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+          } catch {}
+          return mapped;
+        }
+      }
+    } catch (e) {
+      // Fallback to localStorage if backend is unreachable
+    }
+
+    try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         return JSON.parse(stored);
