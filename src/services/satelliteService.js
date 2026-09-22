@@ -18,22 +18,30 @@ export const satelliteService = {
     try {
       const data = await apiClient.get(`/api/v1/satellite?lat=${lat}&lon=${lon}`);
       const sat = data?.data || data;
-      if (sat && sat.ndvi !== undefined) {
+      const ndvi = sat?.spectral_indices?.ndvi ?? sat?.ndvi;
+      if (sat && ndvi !== undefined) {
+        const isLive = sat.data_source_type === "LIVE_SATELLITE";
         return {
-          provider: "Sentinel-2 L2A & Landsat-9",
-          resolution: "10m Multispectral",
-          ndvi: sat.ndvi,
-          evi: sat.evi ?? 0.54,
-          ndwi: sat.ndwi ?? 0.22,
-          cloudCoverage: sat.cloud_cover_percent ? `${sat.cloud_cover_percent}%` : "8%",
-          lastPassDate: sat.acquisition_date || "2026-09-17",
-          dataSource: "Live Sentinel-2 Telemetry"
+          provider: isLive ? "Sentinel-2 L2A (Copernicus)" : (sat.provider || "Calibrated Phenological Model (DOY-based)"),
+          resolution: isLive ? "10m Multispectral" : "10m Equivalent (Simulated)",
+          ndvi: Number(ndvi),
+          evi: sat?.spectral_indices?.evi ?? sat?.evi ?? 0.54,
+          ndwi: sat?.spectral_indices?.ndwi ?? sat?.ndwi ?? 0.22,
+          cloudCoverage: sat.cloud_cover_percent !== undefined ? `${sat.cloud_cover_percent}%` : "0%",
+          lastPassDate: sat.acquisition_date || sat.timestamp?.split('T')[0] || new Date().toISOString().split('T')[0],
+          dataSource: isLive ? "LIVE_SATELLITE" : (sat.data_source_type || "MODEL_SIMULATION"),
+          sourceStatus: isLive ? "LIVE" : "MODEL_SIMULATION",
+          rawIndicators: sat
         };
       }
     } catch (err) {
       if (!USE_MOCK_FALLBACK) throw err;
     }
 
-    return { ...defaultFarmData.satellite, dataSource: "Demo Fallback" };
+    return { 
+      ...defaultFarmData.satellite, 
+      dataSource: "FALLBACK",
+      sourceStatus: "FALLBACK" 
+    };
   }
 };

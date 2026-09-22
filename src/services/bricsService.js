@@ -28,22 +28,29 @@ export const bricsService = {
     const source = bricsCountries.find(c => c.code === sourceCode) || bricsCountries[0];
     const target = bricsCountries.find(c => c.code === targetCode) || bricsCountries[1];
 
-    const payload = sampleDataExchangePayload(source, target, indicator);
+    let payload = sampleDataExchangePayload(source, target, indicator);
 
     // Persist to backend SQLite DB DataExchangeLog audit table
     try {
-      await apiClient.post('/api/brics/exchange', {
+      const res = await apiClient.post('/api/v1/brics/exchange', {
         source_node: source.name,
         target_node: target.name,
+        source_country: sourceCode,
+        destination_country: targetCode,
         indicator: indicator,
         payload: payload
       });
+      const data = res?.data || res;
+      if (data?.sanitized_payload) {
+        payload = data.sanitized_payload;
+      }
     } catch (e) {
       console.warn("Backend CADS exchange logging failed (offline fallback):", e);
     }
 
     return {
       success: true,
+      prototypeLabel: "BRICS Interoperability Prototype (CADS Sandbox)",
       source,
       target,
       indicator,

@@ -6,6 +6,7 @@ from .localize import localize_bp
 from .farm import farm_bp
 from .exchange import exchange_bp
 from .sensor import sensor_bp
+from .regenerative import regenerative_bp
 
 __all__ = [
     "advisory_bp",
@@ -15,5 +16,6 @@ __all__ = [
     "localize_bp",
     "farm_bp",
     "exchange_bp",
-    "sensor_bp"
+    "sensor_bp",
+    "regenerative_bp"
 ]

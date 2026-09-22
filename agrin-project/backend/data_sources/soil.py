@@ -161,7 +161,6 @@ def fetch_soilgrids_profile(lat: float, lon: float, timeout_seconds: int = 5) ->
     except Exception as err:
         pass
 
-    # Use regional pedological baseline on error/timeout
     fallback = regional_soil_estimation(lat, lon)
     return {
         "status": "fallback",
@@ -180,3 +179,9 @@ def fetch_soilgrids_profile(lat: float, lon: float, timeout_seconds: int = 5) ->
             "organic_carbon_status": "Medium"
         }
     }
+
+
+# Convenience alias for uniform API naming
+get_soil_data = fetch_soilgrids_profile
+
+

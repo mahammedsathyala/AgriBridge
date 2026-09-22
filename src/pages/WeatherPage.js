@@ -141,8 +141,13 @@ export function renderWeatherPage(container) {
         <div class="card card--primary" style="background: linear-gradient(135deg, #023e8a 0%, #0077b6 100%); color: white; border-top: 4px solid var(--color-sky-400);">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4);">
             <div>
-              <div style="font-size: 0.82rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.05em;">
-                ${t('weather.currentConditions')}
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-size: 0.82rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.05em;">
+                  ${t('weather.currentConditions')}
+                </div>
+                <span class="badge ${currentWeather.sourceStatus === 'LIVE' ? 'badge-success' : 'badge-warning'}" style="font-size: 0.7rem; padding: 2px 8px;">
+                  ● ${currentWeather.dataSource || (currentWeather.sourceStatus === 'LIVE' ? 'Live (Open-Meteo)' : 'Fallback Model')}
+                </span>
               </div>
               <div style="display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-2) 0;">
                 <span style="font-size: 3rem; font-weight: 900;">${currentWeather.temp}°C</span>
@@ -151,7 +156,7 @@ export function renderWeatherPage(container) {
                 </span>
               </div>
               <div style="font-size: 0.82rem; opacity: 0.85;">
-                ${t('weather.feelsLike')}: ${currentWeather.feelsLike}°C • Barometer: ${currentWeather.pressureHpa} hPa
+                ${t('weather.feelsLike')}: ${currentWeather.feelsLike}°C • Barometer: ${currentWeather.pressureHpa || 1012} hPa
               </div>
             </div>
 
@@ -164,17 +169,17 @@ export function renderWeatherPage(container) {
 
               <div style="background: rgba(255,255,255,0.15); padding: 8px 14px; border-radius: var(--radius-md); backdrop-filter: blur(4px);">
                 <div style="font-size: 0.72rem; opacity: 0.8;">💨 ${t('weather.windSpeed')}</div>
-                <div style="font-weight: 700; font-size: 1.1rem;">${currentWeather.windSpeedKmH} km/h</div>
+                <div style="font-weight: 700; font-size: 1.1rem;">${currentWeather.windSpeedKmH || 12} km/h</div>
               </div>
 
               <div style="background: rgba(255,255,255,0.15); padding: 8px 14px; border-radius: var(--radius-md); backdrop-filter: blur(4px);">
                 <div style="font-size: 0.72rem; opacity: 0.8;">☀️ ${t('weather.uvIndex')}</div>
-                <div style="font-weight: 700; font-size: 1.1rem;">${currentWeather.uvIndex} (High)</div>
+                <div style="font-weight: 700; font-size: 1.1rem;">${currentWeather.uvIndex || 7.2} (High)</div>
               </div>
 
               <div style="background: rgba(255,255,255,0.15); padding: 8px 14px; border-radius: var(--radius-md); backdrop-filter: blur(4px);">
                 <div style="font-size: 0.72rem; opacity: 0.8;">⚠️ ${t('weather.droughtRisk')}</div>
-                <div style="font-weight: 700; font-size: 1.1rem;">${currentWeather.droughtRisk}</div>
+                <div style="font-weight: 700; font-size: 1.1rem;">${currentWeather.droughtRisk || 'Low'}</div>
               </div>
             </div>
           </div>

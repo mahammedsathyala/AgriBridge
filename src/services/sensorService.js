@@ -122,5 +122,64 @@ export const sensorService = {
       coordinates: { lat, lng },
       dataSource: "Demo Fallback"
     };
+  },
+
+  /**
+   * Fetch historical sensor telemetry from backend database for charts
+   */
+  async getTelemetryHistory(farmId = "sathyala-farm-001", limit = 30) {
+    try {
+      const res = await apiClient.get(`/api/v1/farms/${encodeURIComponent(farmId)}/sensors/history?limit=${limit}`);
+      const data = res?.data || res;
+      const historyList = data?.history || (Array.isArray(data) ? data : []);
+
+      if (Array.isArray(historyList) && historyList.length > 0) {
+        // Records are descending (newest first); reverse for chronological chart
+        const chronological = [...historyList].reverse();
+        const formatted = chronological.map((rec, idx) => {
+          const moisture = Math.round(rec.soil_moisture_pct ?? 35);
+          const ambTemp = Number(rec.ambient_temperature_c ?? rec.soil_temperature_c ?? 30);
+          // Derived crop health index from environmental metrics
+          let health = 100;
+          if (moisture < 25) health -= (25 - moisture) * 2;
+          else if (moisture > 60) health -= (moisture - 60) * 1.2;
+          if (ambTemp > 35) health -= (ambTemp - 35) * 3;
+          health = Math.min(98, Math.max(45, Math.round(health)));
+
+          const timeLabel = rec.recorded_at ? new Date(rec.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `T-${chronological.length - idx}`;
+
+          return {
+            day: timeLabel,
+            health: health,
+            moisture: moisture,
+            stress: Math.round(ambTemp),
+            raw: rec
+          };
+        });
+
+        return {
+          history: formatted,
+          sourceStatus: "LIVE",
+          count: formatted.length,
+          isLive: true
+        };
+      } else {
+        return {
+          history: [],
+          sourceStatus: "EMPTY",
+          count: 0,
+          isLive: false
+        };
+      }
+    } catch (err) {
+      if (!USE_MOCK_FALLBACK) throw err;
+    }
+
+    return {
+      history: [],
+      sourceStatus: "DEMO",
+      count: 0,
+      isLive: false
+    };
   }
 };

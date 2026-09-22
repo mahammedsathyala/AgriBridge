@@ -71,15 +71,21 @@ def fetch_satellite_ndvi(lat: float, lon: float, date: Optional[str] = None) -> 
     client_secret = os.getenv("SENTINEL_HUB_CLIENT_SECRET")
     
     is_live_sentinel = bool(client_id and client_secret)
-    provider_name = "Sentinel Hub API" if is_live_sentinel else "Sentinel-2 MultiSpectral Calibrated Engine"
+    data_source_type = "LIVE_SATELLITE" if is_live_sentinel else "MODEL_SIMULATION"
+    provider_name = "Sentinel Hub API (Live)" if is_live_sentinel else "Sentinel-2 Calibrated Phenological Model (Simulation)"
     
     metrics = compute_spectral_vegetation_index(lat, lon, date)
     
     return {
         "status": "success",
+        "data_source_type": data_source_type,
         "provider": provider_name,
         "coordinates": {"latitude": lat, "longitude": lon},
         "observation_timestamp": datetime.now(timezone.utc).isoformat(),
+        "ndvi": metrics["ndvi"],
+        "ndwi": metrics["ndwi_moisture_index"],
+        "canopy_cover_class": metrics["canopy_status"],
+        "crop_vigor_rating": metrics["vitality_rating"],
         "spectral_indices": {
             "ndvi": metrics["ndvi"],
             "ndwi_moisture": metrics["ndwi_moisture_index"],
@@ -87,3 +93,8 @@ def fetch_satellite_ndvi(lat: float, lon: float, date: Optional[str] = None) -> 
             "crop_vigor_rating": metrics["vitality_rating"]
         }
     }
+
+
+# Convenience alias for uniform API naming
+get_satellite_indicators = fetch_satellite_ndvi
+

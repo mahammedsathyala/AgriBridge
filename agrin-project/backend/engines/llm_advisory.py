@@ -280,6 +280,7 @@ Disease Detection:
                     parsed = json.loads(json_str)
                     return {
                         "status": "success",
+                        "source_status": "LIVE_LLM",
                         "engine": "Anthropic Claude 3.5 Sonnet (Live LLM)",
                         "language": lang_name,
                         **parsed
@@ -300,6 +301,7 @@ Disease Detection:
 
         return {
             "status": "success",
+            "source_status": "LOCAL_SYNTHESIS",
             "engine": "AgriN Multilingual Agronomic Vernacular Engine (Offline/Calibrated Mode)",
             "provider": "Ready for live Anthropic API Key (ANTHROPIC_API_KEY in .env)",
             **local_result

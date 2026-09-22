@@ -230,6 +230,8 @@ class DiseaseDiagnosisEngine:
                 return {
                     "status": "success",
                     "engine": "YOLOv8 Ultralytics Deep Neural Network",
+                    "weights_status": "real_yolov8_nn",
+                    "diagnosis_source": "YOLOv8",
                     "weights_source": "AgriGuard Trained Weights (Local .pt)",
                     "crop": crop_name,
                     "image_metadata": {
@@ -246,7 +248,11 @@ class DiseaseDiagnosisEngine:
                         "description": pathology["description"]
                     },
                     "organic_treatment_plan": pathology["organic_remedies"],
-                    "regenerative_prevention": pathology["regenerative_prevention"]
+                    "regenerative_prevention": pathology["regenerative_prevention"],
+                    "remedies": {
+                        "organic": pathology["organic_remedies"],
+                        "regenerative": pathology["regenerative_prevention"]
+                    }
                 }
             except Exception as err:
                 print(f"[YOLOv8 Inference Error] {err}, falling back to diagnostic calibration.")
@@ -273,8 +279,10 @@ class DiseaseDiagnosisEngine:
 
         return {
             "status": "success",
-            "engine": "YOLOv8 Diagnostic Vision Engine (Calibrated Mode)",
-            "weights_source": "Placeholder Weights Active (Ready for AgriGuard .pt drop-in)",
+            "engine": "Agronomic Pathology Heuristic Classifier (RGB Spectrum Analysis)",
+            "weights_status": "calibrated_heuristic",
+            "diagnosis_source": "HEURISTIC",
+            "weights_source": "Heuristic Mode Active (YOLOv8 .pt weights placeholder)",
             "crop": crop_name,
             "image_metadata": {
                 "width": img_width,
@@ -291,7 +299,11 @@ class DiseaseDiagnosisEngine:
                 "description": pathology["description"]
             },
             "organic_treatment_plan": pathology["organic_remedies"],
-            "regenerative_prevention": pathology["regenerative_prevention"]
+            "regenerative_prevention": pathology["regenerative_prevention"],
+            "remedies": {
+                "organic": pathology["organic_remedies"],
+                "regenerative": pathology["regenerative_prevention"]
+            }
         }
 
 

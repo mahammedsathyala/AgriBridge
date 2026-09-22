@@ -169,15 +169,28 @@ export const advisoryService = {
         }
       });
 
-      const adv = data?.localized_advisory || data?.data?.localized_advisory;
-      if (adv) {
+      const adv = data?.data || data;
+      const script = adv?.audio_script || adv?.actionable_guidance || adv?.bulletin || adv?.answer || data?.audio_script || data?.answer;
+      
+      if (script) {
+        let fullAnswer = script;
+        if (Array.isArray(adv.urgent_actions) && adv.urgent_actions.length > 0) {
+          fullAnswer += "\n\n" + adv.urgent_actions.map(a => `• ${a}`).join("\n");
+        }
+        if (adv.why_this_works) {
+          fullAnswer += `\n\n💡 ${adv.why_this_works}`;
+        }
+
+        const engineName = adv.engine || (adv.source_status === 'LIVE_LLM' ? "Anthropic Claude 3.5 Sonnet" : "AgriN Vernacular Engine");
         return {
-          answer: adv.actionable_guidance || adv.bulletin || adv.greeting || "Advisory guidance generated.",
-          sources: [`AgriN Localized Engine (${crop})`, `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`],
+          answer: fullAnswer,
+          sources: [engineName, `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`],
+          sourceStatus: adv.source_status || "LOCAL_SYNTHESIS",
           disclaimer: locale === 'hi' ? "निर्णय-सहायता सलाह। स्थानीय कृषि अधिकारी से पुष्टि करें।" : (locale === 'te' ? "సహాయక సిఫార్సు మాత్రమే." : "Decision support advisory only. Verify with local agricultural officers.")
         };
       }
     } catch (e) {
+      console.warn("Backend /api/v1/localizations request failed, using client agronomic fallback:", e);
       // Fall through to local agronomic expert rules
     }
 

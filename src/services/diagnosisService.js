@@ -56,6 +56,10 @@ export const diagnosisService = {
       confidenceScore = Math.round(primaryFinding.confidence_score <= 1.0 ? primaryFinding.confidence_score * 100 : primaryFinding.confidence_score);
     }
 
+    const weightsStatus = dataObj?.weights_status || dataObj?.data_quality?.weights_status || (backendResult ? "calibrated_heuristic" : "fallback");
+    const diagnosisSource = dataObj?.diagnosis_source || dataObj?.data_quality?.diagnosis_source || (backendResult ? "HEURISTIC" : "FALLBACK");
+    const engineName = dataObj?.engine || dataObj?.data_quality?.model_name || (backendResult ? "Agronomic Heuristic Classifier" : "Demo Fallback");
+
     const result = {
       ...mockSampleDiagnosis,
       cropName: crop,
@@ -70,7 +74,10 @@ export const diagnosisService = {
       imageUrl: typeof imageDataUrlOrFile === 'string' ? imageDataUrlOrFile : "./src/assets/sample_leaf.jpg",
       isSample,
       screeningDisclaimer: dataObj?.screening_disclaimer || "AI-assisted screening tool, not a certified laboratory diagnosis.",
-      dataSource: backendResult ? "Live YOLOv8 API" : "Demo Fallback"
+      weightsStatus,
+      diagnosisSource,
+      engineName,
+      dataSource: diagnosisSource === "YOLOv8" ? "YOLOv8 Neural Network" : (diagnosisSource === "HEURISTIC" ? "Agronomic Heuristic Classifier" : "Demo Fallback")
     };
 
     // Append to local history with crop info

@@ -170,15 +170,23 @@ def diagnose_crop():
     except Exception as db_err:
         print(f"Warning: Failed to persist DiagnosisRecord: {db_err}")
 
+    weights_status = result.get("weights_status", "calibrated_heuristic")
+    diagnosis_source = result.get("diagnosis_source", "HEURISTIC")
+    engine_name = result.get("engine", "Agronomic Pathology Classifier")
+
     response_payload = {
         "status": "success",
         "schema_version": "1.0.0",
         "request_id": f"req-diag-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')[:17]}",
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "data_sources": ["YOLOv8 Edge Pathology Mesh", "ICAR Plant Protection Database"],
+        "data_sources": [engine_name, "ICAR Plant Protection Database"],
         "warnings": warnings,
+        "weights_status": weights_status,
+        "diagnosis_source": diagnosis_source,
         "data_quality": {
-            "model_name": "YOLOv8-Plant-Pathology",
+            "model_name": engine_name,
+            "weights_status": weights_status,
+            "diagnosis_source": diagnosis_source,
             "model_version": "1.0.0",
             "confidence_percent": conf_val
         },
@@ -188,6 +196,9 @@ def diagnose_crop():
             "crop_name": crop_name,
             "disease_detected": disease_name,
             "confidence_score": conf_val,
+            "weights_status": weights_status,
+            "diagnosis_source": diagnosis_source,
+            "engine": engine_name,
             "screening_disclaimer": "AI screening tool only; consult your local agricultural extension officer for laboratory confirmation.",
             "remedies": result.get("remedies", {}),
             "findings": result.get("findings", []),

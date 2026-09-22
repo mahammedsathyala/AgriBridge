@@ -1,26 +1,32 @@
 import { t } from '../i18n/index.js';
 
-export function renderCropHealthChart(container, { telemetryData = [] }) {
+export function renderCropHealthChart(container, { telemetryData = [], sourceStatus = 'DEMO', onSyncNow = null }) {
   let activeFilter = '14'; // '7' | '14' | '30'
 
   function getSliceData() {
     let days = parseInt(activeFilter, 10);
+    if (!telemetryData || telemetryData.length === 0) {
+      return [];
+    }
+    if (telemetryData.length <= days) {
+      return telemetryData;
+    }
     if (days === 7) {
       return telemetryData.slice(-7);
     }
     if (days === 14) {
       return telemetryData.slice(-14);
     }
-    // For 30 days, extrapolate trend based on 14 days
+    // For 30 days, extrapolate trend based on telemetryData
     const base = [...telemetryData];
     const full = [];
     for (let i = 1; i <= 30; i++) {
       const idx = (i - 1) % base.length;
       full.push({
         day: `Day ${i}`,
-        health: Math.min(95, Math.max(65, base[idx].health + (Math.sin(i / 2) * 4))),
-        moisture: Math.min(60, Math.max(25, base[idx].moisture + (Math.cos(i / 2) * 5))),
-        stress: Math.min(38, Math.max(24, base[idx].stress + (Math.sin(i / 3) * 3)))
+        health: Math.min(95, Math.max(65, (base[idx].health ?? 80) + (Math.sin(i / 2) * 4))),
+        moisture: Math.min(60, Math.max(25, (base[idx].moisture ?? 35) + (Math.cos(i / 2) * 5))),
+        stress: Math.min(38, Math.max(24, (base[idx].stress ?? 30) + (Math.sin(i / 3) * 3)))
       });
     }
     return full;
@@ -29,6 +35,44 @@ export function renderCropHealthChart(container, { telemetryData = [] }) {
   function update() {
     const data = getSliceData();
     const count = data.length;
+
+    const isLive = sourceStatus === 'LIVE';
+    const isDemo = sourceStatus === 'DEMO';
+    const isEmpty = count === 0;
+
+    let badgeHtml = '';
+    if (isLive) {
+      badgeHtml = `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; background:rgba(45,106,79,0.12); color:#2d6a4f; border:1px solid rgba(45,106,79,0.3); padding:2px 8px; border-radius:12px; font-weight:600;">● Live DB (${telemetryData.length} records)</span>`;
+    } else if (isDemo) {
+      badgeHtml = `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; background:rgba(217,119,6,0.12); color:#b45309; border:1px solid rgba(217,119,6,0.3); padding:2px 8px; border-radius:12px; font-weight:600;">ℹ️ Demo Simulation</span>`;
+    } else {
+      badgeHtml = `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; background:rgba(100,116,139,0.12); color:#64748b; border:1px solid rgba(100,116,139,0.3); padding:2px 8px; border-radius:12px; font-weight:600;">○ No DB Telemetry</span>`;
+    }
+
+    if (isEmpty) {
+      container.innerHTML = `
+        <div class="card chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+                <span>📈</span>
+                <span>${t('overview.healthChartTitle')}</span>
+                ${badgeHtml}
+              </div>
+              <div class="card-subtitle">${t('overview.chartSubtitle')}</div>
+            </div>
+          </div>
+          <div style="padding: 32px 16px; text-align: center; color: var(--text-muted);">
+            <div style="font-size: 28px; margin-bottom: 8px;">📡</div>
+            <div style="font-weight: 600; margin-bottom: 4px;">No Telemetry Records in SQLite Database</div>
+            <div style="font-size: 13px; max-width: 420px; margin: 0 auto 16px auto;">
+              Connect ESP32 sensor node or click sync in IoT tab to record live telemetry packets.
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
 
     // SVG coordinates setup
     const svgWidth = 700;
@@ -42,24 +86,22 @@ export function renderCropHealthChart(container, { telemetryData = [] }) {
     const plotHeight = svgHeight - paddingTop - paddingBottom;
 
     // Scale calculations
-    const getX = (i) => paddingLeft + (i / (count - 1)) * plotWidth;
+    const getX = (i) => count <= 1 ? (paddingLeft + plotWidth / 2) : (paddingLeft + (i / (count - 1)) * plotWidth);
     const getY = (val, min, max) => paddingTop + plotHeight - ((val - min) / (max - min)) * plotHeight;
 
     // Data ranges
-    // Crop health: 50 to 100
-    // Moisture: 15 to 65%
-    // Temp stress: 20 to 45°C
-    const healthPoints = data.map((d, i) => `${getX(i)},${getY(d.health, 50, 100)}`).join(' ');
-    const moisturePoints = data.map((d, i) => `${getX(i)},${getY(d.moisture, 15, 65)}`).join(' ');
-    const stressPoints = data.map((d, i) => `${getX(i)},${getY(d.stress, 20, 45)}`).join(' ');
+    const healthPoints = data.map((d, i) => `${getX(i)},${getY(d.health ?? 80, 50, 100)}`).join(' ');
+    const moisturePoints = data.map((d, i) => `${getX(i)},${getY(d.moisture ?? 35, 15, 65)}`).join(' ');
+    const stressPoints = data.map((d, i) => `${getX(i)},${getY(d.stress ?? 30, 20, 45)}`).join(' ');
 
     container.innerHTML = `
       <div class="card chart-card">
         <div class="card-header">
           <div>
-            <div class="card-title">
+            <div class="card-title" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span>📈</span>
               <span>${t('overview.healthChartTitle')}</span>
+              ${badgeHtml}
             </div>
             <div class="card-subtitle">${t('overview.chartSubtitle')}</div>
           </div>

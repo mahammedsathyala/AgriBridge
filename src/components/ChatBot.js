@@ -44,10 +44,11 @@ export function renderChatBot(container) {
         <div class="chat-messages" id="chat-stream">
           ${messages.map(m => `
             <div class="chat-msg ${m.sender}">
-              <div>${m.text}</div>
+              <div style="white-space: pre-line;">${m.text}</div>
               ${m.sources ? `
                 <div class="chat-source-citation">
                   <strong>📚 ${t('advisory.sourcesLabel')}:</strong> ${m.sources.join(' • ')}
+                  ${m.sourceStatus ? ` <span class="badge ${m.sourceStatus === 'LIVE_LLM' ? 'badge-success' : 'badge-sky'}" style="font-size: 0.65rem; margin-left: 4px;">${m.sourceStatus === 'LIVE_LLM' ? 'Live Claude 3.5' : (m.sourceStatus === 'LOCAL_SYNTHESIS' ? 'AgriN Local Model' : 'Client Fallback')}</span>` : ''}
                 </div>
               ` : ''}
               ${m.disclaimer ? `
@@ -112,6 +113,7 @@ export function renderChatBot(container) {
         sender: 'bot',
         text: res.answer,
         sources: res.sources,
+        sourceStatus: res.sourceStatus,
         disclaimer: res.disclaimer
       });
       render();

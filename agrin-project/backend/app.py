@@ -23,7 +23,8 @@ from routes import (
     weather_data_bp,
     localize_bp,
     exchange_bp,
-    sensor_bp
+    sensor_bp,
+    regenerative_bp
 )
 
 
@@ -109,6 +110,7 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(localize_bp)
     app.register_blueprint(exchange_bp)
     app.register_blueprint(sensor_bp)
+    app.register_blueprint(regenerative_bp)
 
     @app.route("/", methods=["GET"])
     def index():
@@ -133,6 +135,7 @@ def create_app(config_class=Config) -> Flask:
                 "weather": "/api/v1/weather?lat=...&lon=... (GET)",
                 "soil": "/api/v1/soil?lat=...&lon=... (GET)",
                 "satellite": "/api/v1/satellite?lat=...&lon=... (GET)",
+                "regenerative": "/api/v1/regenerative/assessment (GET)",
                 "farm": "/api/v1/farm (GET, POST)"
             }
         }), 200

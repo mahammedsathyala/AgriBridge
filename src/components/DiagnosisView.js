@@ -118,11 +118,20 @@ export function renderDiagnosisView(container) {
               <div class="diagnosis-result-card">
                 <div class="diagnosis-header-row">
                   <div>
-                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-amber-600); text-transform: uppercase;">
-                      ${t('diagnosis.resultTitle')}
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom: 4px;">
+                      <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-amber-600); text-transform: uppercase;">
+                        ${t('diagnosis.resultTitle')}
+                      </div>
+                      ${diagnosisResult.diagnosisSource === 'YOLOv8' ? `
+                        <span style="font-size: 0.68rem; background: #d8f3dc; color: #1b4332; border: 1px solid #b7e4c7; padding: 1px 6px; border-radius: 10px; font-weight: 600;">⚡ YOLOv8 Neural Inference</span>
+                      ` : (diagnosisResult.diagnosisSource === 'HEURISTIC' ? `
+                        <span style="font-size: 0.68rem; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 1px 6px; border-radius: 10px; font-weight: 600;">🔬 Agronomic Heuristic (RGB Spectrum)</span>
+                      ` : `
+                        <span style="font-size: 0.68rem; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 1px 6px; border-radius: 10px; font-weight: 600;">⚠️ Offline Fallback</span>
+                      `)}
                     </div>
                     <div class="diagnosis-condition-name">
-                      ${isTe ? diagnosisResult.conditionTe : (isHi ? (diagnosisResult.conditionHi || 'टिक्का पत्ती धब्बा रोग (Early Leaf Spot)') : diagnosisResult.conditionEn)}
+                      ${isTe ? diagnosisResult.conditionTe : (isHi ? (diagnosisResult.conditionHi || 'టिक्కా पत्ती धब्बा रोग (Early Leaf Spot)') : diagnosisResult.conditionEn)}
                     </div>
                     <div style="font-size: 0.78rem; font-style: italic; color: var(--text-muted);">
                       Pathogen: ${diagnosisResult.pathogen}

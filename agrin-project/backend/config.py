@@ -47,8 +47,10 @@ class Config:
     # Weather (OpenWeatherMap)
     OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
     
-    # IoT MQTT & HiveMQ Cloud
-    HIVEMQ_API_KEY = os.getenv("HIVEMQ_API_KEY", "")
-    MQTT_BROKER = os.getenv("MQTT_BROKER", "broker.hivemq.com")
+    # IoT MQTT Config
+    MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", os.getenv("MQTT_BROKER", ""))
     MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
     MQTT_TOPIC = os.getenv("MQTT_TOPIC", "agrin/sensors/soil")
+    MQTT_USERNAME = os.getenv("MQTT_USERNAME", "")
+    MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", os.getenv("HIVEMQ_API_KEY", ""))
+

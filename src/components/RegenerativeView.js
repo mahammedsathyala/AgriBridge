@@ -1,11 +1,17 @@
 import { t, getLocale } from '../i18n/index.js';
 import { defaultRegenerativePractices, defaultRegenerativeMetrics } from '../data/mockRegenerative.js';
+import { regenerativeService } from '../services/regenerativeService.js';
 import { showToast } from './Toast.js';
 
 const STORAGE_KEY = 'agribridge_regen_plan';
 
 export function renderRegenerativeView(container) {
   let practices = [...defaultRegenerativePractices];
+  let metrics = { ...defaultRegenerativeMetrics };
+  let sourceStatus = "MODEL_CALCULATION";
+  let methodology = "";
+  let disclaimer = "";
+  let isLoading = true;
 
   // Restore stored practice states if available
   try {
@@ -19,8 +25,29 @@ export function renderRegenerativeView(container) {
     }
   } catch (e) {}
 
+  async function loadData() {
+    try {
+      const assessment = await regenerativeService.getAssessment();
+      if (assessment) {
+        metrics = {
+          baseScore: assessment.baseScore,
+          targetScore: assessment.targetScore,
+          indicators: assessment.indicators
+        };
+        sourceStatus = assessment.sourceStatus;
+        methodology = assessment.methodology;
+        disclaimer = assessment.disclaimer;
+      }
+    } catch (err) {
+      console.warn("Regenerative assessment load error:", err);
+    } finally {
+      isLoading = false;
+      render();
+    }
+  }
+
   function calculateScore() {
-    let score = defaultRegenerativeMetrics.baseScore;
+    let score = metrics.baseScore;
     practices.forEach(p => {
       if (p.inPlan) score += p.scoreImpact;
     });
@@ -39,7 +66,7 @@ export function renderRegenerativeView(container) {
     const isTe = locale === 'te';
     const isHi = locale === 'hi';
     const currentScore = calculateScore();
-    const targetScore = defaultRegenerativeMetrics.targetScore;
+    const targetScore = metrics.targetScore;
     const addedCount = practices.filter(p => p.inPlan).length;
 
     const HI_PILLARS = {
@@ -104,9 +131,13 @@ export function renderRegenerativeView(container) {
         <!-- Top Summary Row: Score Gauge + Progress Pillars -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6);">
           <!-- Gauge Card -->
-          <div class="card score-gauge-container">
-            <div style="font-weight: 700; color: var(--color-primary-900); margin-bottom: var(--space-2);">
-              ${t('regen.scoreTitle')}
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); flex-wrap: wrap; gap: 4px;">
+              <div style="font-weight: 700; color: var(--color-primary-900);">
+                AgriBridge Regenerative Practice Score
+              </div>
+              <span class="badge ${sourceStatus === 'MODEL_CALCULATION' ? 'badge-primary' : 'badge-warning'}" style="font-size: 0.7rem;">
+                ${sourceStatus === 'MODEL_CALCULATION' ? '● Live Calculation' : 'ℹ️ Baseline Model'}
+              </span>
             </div>
 
             <div class="gauge-circle">
@@ -155,7 +186,7 @@ export function renderRegenerativeView(container) {
             </div>
 
             <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-              ${defaultRegenerativeMetrics.indicators.map(ind => {
+              ${metrics.indicators.map(ind => {
                 // Boost indicator slightly if corresponding practice added
                 const isBoosted = practices.some(p => p.inPlan && p.scoreImpact >= 7);
                 const val = isBoosted ? Math.min(ind.targetPercent, ind.valuePercent + 8) : ind.valuePercent;
@@ -171,6 +202,7 @@ export function renderRegenerativeView(container) {
                     <div class="progress-bar-track">
                       <div class="progress-bar-fill" style="width: ${val}%; background-color: var(--color-primary-600);"></div>
                     </div>
+                    ${ind.calculationBasis ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Basis: ${ind.calculationBasis}</div>` : ''}
                   </div>
                 `;
               }).join('')}
@@ -250,5 +282,5 @@ export function renderRegenerativeView(container) {
     });
   }
 
-  render();
+  loadData();
 }

@@ -6,6 +6,7 @@ import { showToast } from '../components/Toast.js';
 
 import { farmService } from '../services/farmService.js';
 import { weatherService } from '../services/weatherService.js';
+import { sensorService } from '../services/sensorService.js';
 
 // ---------------------------------------------------------------------------
 // Kolkata live-clock helpers
@@ -94,6 +95,8 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
   let isLoading = !farm;
   let stopClock = null; // cleanup handle for live clock interval
 
+  let sensorHistory = { history: [], sourceStatus: 'DEMO' };
+
   async function reloadOverview() {
     isLoading = true;
     loadError = null;
@@ -101,7 +104,19 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
     try {
       currentFarm = await farmService.getFarmProfile();
       currentWeather.forecast = await weatherService.get5DayForecast();
-      currentWeather.history14Days = await weatherService.get14DayTelemetry();
+      
+      const historyRes = await sensorService.getTelemetryHistory();
+      if (historyRes?.history && historyRes.history.length > 0) {
+        sensorHistory = historyRes;
+      } else {
+        const fallbackHistory = await weatherService.get14DayTelemetry();
+        sensorHistory = {
+          history: fallbackHistory,
+          sourceStatus: 'DEMO',
+          count: fallbackHistory.length
+        };
+      }
+      currentWeather.history14Days = sensorHistory.history;
       if (!currentFarm) throw new Error("Could not load farm profile");
     } catch (err) {
       console.warn("Overview reload error:", err);
@@ -404,8 +419,11 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
 
   // Render Sub-components
     const chartWrapper = container.querySelector('#health-chart-wrapper');
-    if (chartWrapper && (currentWeather.history14Days || weather.history14Days)) {
-      renderCropHealthChart(chartWrapper, { telemetryData: currentWeather.history14Days || weather.history14Days });
+    if (chartWrapper) {
+      renderCropHealthChart(chartWrapper, { 
+        telemetryData: sensorHistory.history || currentWeather.history14Days || weather.history14Days,
+        sourceStatus: sensorHistory.sourceStatus || 'DEMO'
+      });
     }
 
     const weatherWrapper = container.querySelector('#weather-preview-wrapper');
