@@ -143,19 +143,22 @@ def fetch_weather_forecast(lat: float, lon: float, timeout_seconds: int = 5) -> 
                 "highlight": (p_sum or 0) > 10.0
             })
 
+        current_dict = {
+            "temperature_c": round(temp, 1),
+            "relative_humidity_pct": round(humidity, 1),
+            "precipitation_mm": round(precip, 1),
+            "wind_speed_kmh": round(wind_speed, 1),
+            "weather_code": wmo_code,
+            "condition": condition_desc
+        }
+
         return {
             "status": "success",
             "source_status": "LIVE",
             "source": "Open-Meteo REST API",
             "coordinates": {"latitude": lat, "longitude": lon},
-            "current": {
-                "temperature_c": round(temp, 1),
-                "relative_humidity_pct": round(humidity, 1),
-                "precipitation_mm": round(precip, 1),
-                "wind_speed_kmh": round(wind_speed, 1),
-                "weather_code": wmo_code,
-                "condition": condition_desc
-            },
+            "current": current_dict,
+            "live_telemetry": current_dict,
             "forecast": {
                 "seven_day_precipitation_sum_mm": round(precip_7d, 1),
                 "expected_high_c": round(avg_max_temp, 1),
@@ -176,20 +179,22 @@ def fetch_weather_forecast(lat: float, lon: float, timeout_seconds: int = 5) -> 
             {"day_name": "Day 4", "date": "Upcoming", "temperature_max_c": 33.0, "temperature_min_c": 24.0, "precipitation_sum_mm": 0.0, "precipitation_probability_max": 10, "weather_code": 0, "condition": "Clear Sky", "highlight": False},
             {"day_name": "Day 5", "date": "Upcoming", "temperature_max_c": 32.5, "temperature_min_c": 23.5, "precipitation_sum_mm": 0.0, "precipitation_probability_max": 15, "weather_code": 1, "condition": "Mainly Clear", "highlight": False},
         ]
+        fallback_current = {
+            "temperature_c": 28.5,
+            "relative_humidity_pct": 55.0,
+            "precipitation_mm": 0.0,
+            "wind_speed_kmh": 12.0,
+            "weather_code": 1,
+            "condition": "Mainly Clear (Estimated)"
+        }
         return {
             "status": "fallback",
             "source_status": "FALLBACK",
             "source": "AgriN Agro-Climatic Interpolation (Offline/Fallback)",
             "warning": f"Live Open-Meteo request unfulfilled: {str(err)}",
             "coordinates": {"latitude": lat, "longitude": lon},
-            "current": {
-                "temperature_c": 28.5,
-                "relative_humidity_pct": 55.0,
-                "precipitation_mm": 0.0,
-                "wind_speed_kmh": 12.0,
-                "weather_code": 1,
-                "condition": "Mainly Clear (Estimated)"
-            },
+            "current": fallback_current,
+            "live_telemetry": fallback_current,
             "forecast": {
                 "seven_day_precipitation_sum_mm": 12.0,
                 "expected_high_c": 31.0,

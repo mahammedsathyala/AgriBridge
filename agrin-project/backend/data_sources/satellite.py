@@ -76,8 +76,11 @@ def fetch_satellite_ndvi(lat: float, lon: float, date: Optional[str] = None) -> 
     
     metrics = compute_spectral_vegetation_index(lat, lon, date)
     
+    source_status = "LIVE" if is_live_sentinel else "MODEL_SIMULATION"
+    
     return {
         "status": "success",
+        "source_status": source_status,
         "data_source_type": data_source_type,
         "provider": provider_name,
         "coordinates": {"latitude": lat, "longitude": lon},

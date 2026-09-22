@@ -250,22 +250,35 @@ def get_advisory():
 
         advisory_result = get_rule_based_advisory(**engine_params)
 
-        # Optional Localization
+        # Optional Localization / Interactive Farmer AI Query
         localized_guidance = None
-        if data.get("localize") or data.get("localise"):
+        user_query = data.get("query") or data.get("user_query")
+        if data.get("localize") or data.get("localise") or user_query:
             lang = data.get("language") or data.get("lang") or "en"
-            enriched_context = {**advisory_result, "live_telemetry": live_telemetry}
+            enriched_context = {
+                **advisory_result,
+                "crop": crop_name,
+                "variety": crop_variety,
+                "crop_stage": crop_stage,
+                "location": location,
+                "latitude": coordinates[0] if coordinates else None,
+                "longitude": coordinates[1] if coordinates else None,
+                "live_telemetry": live_telemetry,
+                "sensor_data": sensor_data_dict
+            }
             localized_guidance = llm_localizer.generate_plain_advisory(
                 advisory_data=enriched_context,
+                diagnosis_data=data.get("diagnosis_data"),
                 language=lang,
-                farmer_profile=data.get("farmer_profile")
+                farmer_profile=data.get("farmer_profile"),
+                query=user_query
             )
 
         # Persist generated advisories to database
         try:
             active_farm = FarmProfile.query.order_by(FarmProfile.id.desc()).first()
             farm_db_id = active_farm.id if active_farm else None
-            source_type = "llm" if localized_guidance else "rule_based"
+            source_type = "llm" if (localized_guidance and localized_guidance.get("source_status") == "LIVE_LLM") else "rule_based"
 
             recs = advisory_result.get("recommendations", [])
             for r in recs:
@@ -302,6 +315,18 @@ def get_advisory():
             **advisory_result
         }
 
+        # Include normalized AI guidance fields if present
+        if localized_guidance:
+            response_data["answer"] = localized_guidance.get("answer")
+            response_data["audio_script"] = localized_guidance.get("audio_script")
+            response_data["urgent_actions"] = localized_guidance.get("urgent_actions", [])
+            response_data["risk_bulletin"] = localized_guidance.get("risk_bulletin", "")
+            response_data["why_this_works"] = localized_guidance.get("why_this_works", "")
+            response_data["source"] = localized_guidance.get("source", "local_rule_engine")
+            response_data["status"] = localized_guidance.get("status_label") or localized_guidance.get("status", "FALLBACK")
+            response_data["source_status"] = localized_guidance.get("source_status", "LOCAL_SYNTHESIS")
+            response_data["engine"] = localized_guidance.get("engine", "")
+
         standardized_envelope = {
             "status": "success",
             "schema_version": "1.0.0",
@@ -326,6 +351,17 @@ def get_advisory():
             "rule_based_recommendations": advisory_result.get("rule_based_recommendations", advisory_result),
             **advisory_result
         }
+
+        if localized_guidance:
+            standardized_envelope["answer"] = localized_guidance.get("answer")
+            standardized_envelope["audio_script"] = localized_guidance.get("audio_script")
+            standardized_envelope["urgent_actions"] = localized_guidance.get("urgent_actions", [])
+            standardized_envelope["risk_bulletin"] = localized_guidance.get("risk_bulletin", "")
+            standardized_envelope["why_this_works"] = localized_guidance.get("why_this_works", "")
+            standardized_envelope["source"] = localized_guidance.get("source", "local_rule_engine")
+            standardized_envelope["status_label"] = localized_guidance.get("status_label", "FALLBACK")
+            standardized_envelope["source_status"] = localized_guidance.get("source_status", "LOCAL_SYNTHESIS")
+            standardized_envelope["engine"] = localized_guidance.get("engine", "")
 
         return jsonify(standardized_envelope), 200
 

@@ -153,44 +153,94 @@ export const advisoryService = {
     const lat = farm?.coordinates?.lat ?? 15.8281;
     const lon = farm?.coordinates?.lng ?? 78.0373;
     const crop = farm?.crop || "Groundnut";
+    const variety = farm?.cropVariety || "Kadiri-6";
+    const stage = farm?.growthStage || "flowering";
     const locName = farm?.location || "Kurnool, Andhra Pradesh";
 
     try {
-      const data = await apiClient.post('/api/v1/localizations', {
+      const payload = {
         query: userQuery,
-        crop_name: crop,
+        localize: true,
         language: locale === 'te' ? 'te' : (locale === 'hi' ? 'hi' : 'en'),
+        farm_id: farm?.id || "sathyala-farm-001",
+        crop: crop,
+        variety: variety,
+        crop_stage: stage,
         latitude: lat,
         longitude: lon,
+        location: locName,
+        sensor_device_id: "AGRI-ESP32-001",
         farmer_profile: {
           farmer_name: farm?.farmerName || "Sathyala Farmer",
           landholding_acres: farm?.areaAcres || 2.5,
-          location: locName
+          location: locName,
+          crop: crop,
+          crop_stage: stage
         }
-      });
+      };
 
-      const adv = data?.data || data;
-      const script = adv?.audio_script || adv?.actionable_guidance || adv?.bulletin || adv?.answer || data?.audio_script || data?.answer;
+      // Try /api/v1/advisories first (has full telemetry ingestion), fallback to /api/v1/localizations
+      let data;
+      try {
+        data = await apiClient.post('/api/v1/advisories', payload);
+      } catch (advErr) {
+        data = await apiClient.post('/api/v1/localizations', payload);
+      }
+
+      const adv = data?.localized_farmer_guidance || data?.data?.localized_farmer_guidance || data?.data || data;
       
-      if (script) {
-        let fullAnswer = script;
-        if (Array.isArray(adv.urgent_actions) && adv.urgent_actions.length > 0) {
-          fullAnswer += "\n\n" + adv.urgent_actions.map(a => `• ${a}`).join("\n");
+      // Support all reasonable response nesting hierarchies, preferring normalized "answer"
+      const rawAnswer = adv?.answer 
+        || data?.answer 
+        || adv?.audio_script 
+        || data?.audio_script 
+        || adv?.localized_advisory 
+        || data?.localized_advisory
+        || adv?.actionable_guidance;
+
+      if (rawAnswer) {
+        let fullAnswer = rawAnswer;
+        const urgentActions = adv?.urgent_actions || data?.urgent_actions;
+        const whyThisWorks = adv?.why_this_works || data?.why_this_works;
+        
+        // If actions not already contained in answer, append cleanly
+        if (Array.isArray(urgentActions) && urgentActions.length > 0 && !fullAnswer.includes(urgentActions[0])) {
+          fullAnswer += "\n\n" + urgentActions.map(a => `• ${a}`).join("\n");
         }
-        if (adv.why_this_works) {
-          fullAnswer += `\n\n💡 ${adv.why_this_works}`;
+        if (whyThisWorks && !fullAnswer.includes(whyThisWorks)) {
+          fullAnswer += `\n\n💡 ${whyThisWorks}`;
         }
 
-        const engineName = adv.engine || (adv.source_status === 'LIVE_LLM' ? "Anthropic Claude 3.5 Sonnet" : "AgriN Vernacular Engine");
+        const isLive = adv?.source_status === 'LIVE_LLM' 
+          || adv?.source === 'anthropic_claude' 
+          || data?.source === 'anthropic_claude' 
+          || adv?.status === 'LIVE'
+          || data?.status === 'LIVE';
+
+        const isNotConfigured = adv?.status === 'NOT_CONFIGURED' 
+          || data?.status === 'NOT_CONFIGURED'
+          || adv?.status_label === 'NOT_CONFIGURED';
+
+        const sourceStatus = isLive ? 'LIVE' : (isNotConfigured ? 'NOT_CONFIGURED' : 'FALLBACK');
+        
+        const engineName = isLive 
+          ? "Anthropic Claude 3.5 Sonnet (Live LLM)" 
+          : (isNotConfigured 
+              ? "AgriN Agronomic Rule Engine (Offline)" 
+              : (adv?.engine || "AgriN Multilingual Agronomic Vernacular Engine (Fallback)"));
+
+        const gpsCitation = `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`;
+        const telemetryCitation = adv?.sensor_status === 'online' ? "ESP32 Live Sensor Probe" : "Agro-Climatic Model Mesh";
+
         return {
           answer: fullAnswer,
-          sources: [engineName, `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`],
-          sourceStatus: adv.source_status || "LOCAL_SYNTHESIS",
+          sources: [engineName, telemetryCitation, gpsCitation],
+          sourceStatus: sourceStatus,
           disclaimer: locale === 'hi' ? "निर्णय-सहायता सलाह। स्थानीय कृषि अधिकारी से पुष्टि करें।" : (locale === 'te' ? "సహాయక సిఫార్సు మాత్రమే." : "Decision support advisory only. Verify with local agricultural officers.")
         };
       }
     } catch (e) {
-      console.warn("Backend /api/v1/localizations request failed, using client agronomic fallback:", e);
+      console.warn("Backend advisory query failed, using client agronomic fallback:", e);
       // Fall through to local agronomic expert rules
     }
 

@@ -60,11 +60,25 @@ def localize_advisory():
             "message": "Must provide either 'advisory_data' (from /advisory), 'diagnosis_data' (from /diagnose), or 'query'."
         }), 400
 
+    adv_payload = advisory_data or {}
+    if not isinstance(adv_payload, dict):
+        adv_payload = {}
+    
+    # Merge top level fields
+    for field in ["crop", "crop_name", "variety", "crop_variety", "crop_stage", "location", "latitude", "longitude", "lat", "lon", "soil_type", "weather", "live_telemetry"]:
+        if field in data and field not in adv_payload:
+            adv_payload[field] = data[field]
+
+    query_str = data.get("query") or data.get("user_query")
+    if query_str and "query" not in adv_payload:
+        adv_payload["query"] = query_str
+
     result = llm_localizer.generate_plain_advisory(
-        advisory_data=advisory_data or {"query": data.get("query"), "crop": data.get("crop_name", "Groundnut")},
+        advisory_data=adv_payload,
         diagnosis_data=diagnosis_data,
         language=language,
-        farmer_profile=farmer_profile
+        farmer_profile=farmer_profile,
+        query=query_str
     )
 
     response = {
@@ -77,6 +91,15 @@ def localize_advisory():
         "data": result,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
+        "answer": result.get("answer"),
+        "audio_script": result.get("audio_script"),
+        "urgent_actions": result.get("urgent_actions", []),
+        "risk_bulletin": result.get("risk_bulletin", ""),
+        "why_this_works": result.get("why_this_works", ""),
+        "source": result.get("source", "local_rule_engine"),
+        "status_label": result.get("status_label", "FALLBACK"),
+        "source_status": result.get("source_status", "LOCAL_SYNTHESIS"),
+        "engine": result.get("engine", ""),
         **result
     }
     return jsonify(response), 200

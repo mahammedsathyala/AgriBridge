@@ -48,7 +48,7 @@ export function renderChatBot(container) {
               ${m.sources ? `
                 <div class="chat-source-citation">
                   <strong>📚 ${t('advisory.sourcesLabel')}:</strong> ${m.sources.join(' • ')}
-                  ${m.sourceStatus ? ` <span class="badge ${m.sourceStatus === 'LIVE_LLM' ? 'badge-success' : 'badge-sky'}" style="font-size: 0.65rem; margin-left: 4px;">${m.sourceStatus === 'LIVE_LLM' ? 'Live Claude 3.5' : (m.sourceStatus === 'LOCAL_SYNTHESIS' ? 'AgriN Local Model' : 'Client Fallback')}</span>` : ''}
+                  ${m.sourceStatus ? ` <span class="badge ${m.sourceStatus === 'LIVE' || m.sourceStatus === 'LIVE_LLM' ? 'badge-success' : (m.sourceStatus === 'NOT_CONFIGURED' ? 'badge-muted' : 'badge-sky')}" style="font-size: 0.65rem; margin-left: 4px;">${m.sourceStatus === 'LIVE' || m.sourceStatus === 'LIVE_LLM' ? 'Live Claude 3.5' : (m.sourceStatus === 'NOT_CONFIGURED' ? 'Rule Engine (Offline)' : 'AgriN Local Engine')}</span>` : ''}
                 </div>
               ` : ''}
               ${m.disclaimer ? `

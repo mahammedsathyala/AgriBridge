@@ -6,6 +6,7 @@ advisory completions, and BRICS interoperability data exchange.
 """
 
 from datetime import datetime, timezone
+from typing import Optional
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -32,6 +33,36 @@ class FarmProfile(db.Model):
     # Relationships
     diagnoses = db.relationship("DiagnosisRecord", backref="farm", lazy=True, cascade="all, delete-orphan")
     advisories = db.relationship("AdvisoryRecord", backref="farm", lazy=True, cascade="all, delete-orphan")
+
+    def __init__(
+        self,
+        farmer_name: str = "Sathyala Farmer",
+        farm_name: str = "Sathyala Farm",
+        location: str = "Kurnool, Andhra Pradesh",
+        lat: float = 15.8281,
+        lng: float = 78.0373,
+        area_acres: float = 2.5,
+        crop: str = "Groundnut",
+        crop_variety: Optional[str] = "K6 (Kadiri-6)",
+        sowing_date: Optional[str] = "2026-08-07",
+        soil_type: str = "Red loamy soil",
+        irrigation_type: str = "Borewell drip",
+        updated_at: Optional[datetime] = None
+    ) -> None:
+        """Explicit constructor for static type checking and model instantiation."""
+        self.farmer_name = farmer_name
+        self.farm_name = farm_name
+        self.location = location
+        self.lat = lat
+        self.lng = lng
+        self.area_acres = area_acres
+        self.crop = crop
+        self.crop_variety = crop_variety
+        self.sowing_date = sowing_date
+        self.soil_type = soil_type
+        self.irrigation_type = irrigation_type
+        if updated_at is not None:
+            self.updated_at = updated_at
 
     def to_dict(self):
         return {
@@ -77,11 +108,12 @@ class DiagnosisRecord(db.Model):
 
     def __init__(
         self,
-        farm_id: int | None = None,
+        farm_id: Optional[int] = None,
         crop: str = "Groundnut",
         disease: str = "",
         confidence: float = 0.0,
-        image_ref: str | None = None,
+        image_ref: Optional[str] = None,
+        created_at: Optional[datetime] = None
     ) -> None:
         """Explicit constructor so static type checkers can see accepted kwargs."""
         self.farm_id = farm_id
@@ -89,6 +121,8 @@ class DiagnosisRecord(db.Model):
         self.disease = disease
         self.confidence = confidence
         self.image_ref = image_ref
+        if created_at is not None:
+            self.created_at = created_at
 
     def to_dict(self):
         return {
@@ -113,6 +147,22 @@ class AdvisoryRecord(db.Model):
     completed = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    def __init__(
+        self,
+        farm_id: Optional[int] = None,
+        recommendation_text: str = "",
+        source: str = "rule_based",
+        completed: bool = False,
+        created_at: Optional[datetime] = None
+    ) -> None:
+        """Explicit constructor so static type checkers can see accepted kwargs."""
+        self.farm_id = farm_id
+        self.recommendation_text = recommendation_text
+        self.source = source
+        self.completed = completed
+        if created_at is not None:
+            self.created_at = created_at
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -134,6 +184,22 @@ class DataExchangeLog(db.Model):
     indicator = db.Column(db.String(100), nullable=False)   # e.g., soil_moisture_cadence
     payload_json = db.Column(db.Text, nullable=False)       # Anonymized CADS JSON
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __init__(
+        self,
+        source_node: str = "",
+        target_node: str = "",
+        indicator: str = "",
+        payload_json: str = "",
+        created_at: Optional[datetime] = None
+    ) -> None:
+        """Explicit constructor so static type checkers can see accepted kwargs."""
+        self.source_node = source_node
+        self.target_node = target_node
+        self.indicator = indicator
+        self.payload_json = payload_json
+        if created_at is not None:
+            self.created_at = created_at
 
     def to_dict(self):
         return {
@@ -163,6 +229,37 @@ class SensorTelemetry(db.Model):
     signal_strength_dbm = db.Column(db.String(30), nullable=False, default="-65 dBm")
     recorded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __init__(
+        self,
+        device_id: str = "AGRI-ESP32-001",
+        farm_id: str = "sathyala-farm-001",
+        soil_moisture_pct: float = 34.0,
+        soil_depth_cm: float = 15.0,
+        soil_temperature_c: float = 29.4,
+        canopy_temperature_c: Optional[float] = 30.8,
+        ambient_temperature_c: float = 32.1,
+        humidity_pct: float = 68.0,
+        battery_pct: float = 88.0,
+        signal_strength_dbm: str = "-65 dBm",
+        recorded_at: Optional[datetime] = None,
+        created_at: Optional[datetime] = None
+    ) -> None:
+        """Explicit constructor so static type checkers can see accepted kwargs."""
+        self.device_id = device_id
+        self.farm_id = farm_id
+        self.soil_moisture_pct = soil_moisture_pct
+        self.soil_depth_cm = soil_depth_cm
+        self.soil_temperature_c = soil_temperature_c
+        self.canopy_temperature_c = canopy_temperature_c
+        self.ambient_temperature_c = ambient_temperature_c
+        self.humidity_pct = humidity_pct
+        self.battery_pct = battery_pct
+        self.signal_strength_dbm = signal_strength_dbm
+        if recorded_at is not None:
+            self.recorded_at = recorded_at
+        if created_at is not None:
+            self.created_at = created_at
 
     def get_status(self) -> str:
         """
@@ -212,4 +309,3 @@ class SensorTelemetry(db.Model):
             "signalStrength": self.signal_strength_dbm,
             "lastSync": "Just now" if status == "online" else (f"{int((datetime.now(timezone.utc) - (self.recorded_at.replace(tzinfo=timezone.utc) if self.recorded_at.tzinfo is None else self.recorded_at)).total_seconds() // 60)} mins ago")
         }
-
