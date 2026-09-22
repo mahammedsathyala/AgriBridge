@@ -12,8 +12,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-AgriBridge%20%7C%20AgriN-2d6a4f?style=for-the-badge" alt="Platform">
   <img src="https://img.shields.io/badge/Focus-BRICS%20Cooperation-1b4332?style=for-the-badge" alt="BRICS Cooperation">
+  <img src="https://img.shields.io/badge/Model-MobileNetV2%20Deep%20Learning-386641?style=for-the-badge" alt="Deep Learning">
   <img src="https://img.shields.io/badge/Languages-English%20%7C%20%E0%B0%A4%E0%B1%86%E0%B0%B2%E0%B1%81%E0%B0%97%E0%B1%81%20%7C%20%E0%A4%B9%E0%A4%BF%E0%A4%82%E0%A4%A6%E0%A4%80-40916c?style=for-the-badge" alt="Multilingual">
-  <img src="https://img.shields.io/badge/Architecture-Decentralized%20Public%20Good-52b788?style=for-the-badge" alt="Decentralized">
+  <img src="https://img.shields.io/badge/Tests-68%2F68%20Passing-52b788?style=for-the-badge" alt="Tests Passing">
   <img src="https://img.shields.io/badge/License-MIT-74c69d?style=for-the-badge" alt="License">
 </p>
 
@@ -26,11 +27,11 @@
 Initially piloted for smallholder groundnut farming in **Kurnool, Andhra Pradesh, India**, AgriBridge tackles critical agricultural vulnerabilities:
 - 🌦️ **Erratic weather patterns & dry spells** driven by climate volatility.
 - 📉 **Soil degradation & microbial depletion** from intensive synthetic monoculture.
-- 🔍 **Delayed crop disease detection** causing devastating yield losses.
+- 🔍 **Delayed crop disease detection** causing devastating yield losses (up to 40-70% in Groundnut).
 - 🗣️ **Language and digital literacy barriers** that exclude rural farmers from modern digital tools.
 - 🌐 **Siloed agricultural research** between emerging economies facing identical climate challenges.
 
-AgriBridge delivers a seamless, zero-build-step, mobile-first Web application connected to the **AgriN Python Flask intelligent backend**—integrating satellite remote sensing, SoilGrids 250m soil chemistry, live IoT sensor telemetry, computer vision disease diagnosis (YOLOv8), and vernacular generative AI (Anthropic Claude).
+AgriBridge delivers a zero-build-step, mobile-first Web application connected to the **AgriN Python Flask intelligent backend**—integrating satellite remote sensing, SoilGrids 250m soil chemistry, live IoT sensor telemetry, **trained MobileNetV2 deep learning Groundnut disease diagnosis**, and **vernacular generative AI advisory (Anthropic Claude 3.5 Sonnet)**.
 
 ---
 
@@ -43,16 +44,17 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 │                             EDGE / FARMER TIER (Web SPA)                         │
 │  - Vanilla ES6+ Browser Native (Zero Build Step)    - Responsive Layout & PWA    │
 │  - Trilingual i18n (English, Telugu తెలుగు, Hindi हिंदी)  - Low-Bandwidth Mode (2G/3G) │
-│  - Interactive SVG Farm Boundary Visualizer        - Dynamic Regenerative Gauge │
+│  - Deep Learning Model Badge & Confidence Warnings - Dynamic Regenerative Gauge │
 └────────────────────────────────────────┬─────────────────────────────────────────┘
                                          │ REST / JSON (or Mock Fallback)
 ┌────────────────────────────────────────▼─────────────────────────────────────────┐
 │                           AGRIN INTELLIGENCE BACKEND                              │
 │                               (Python / Flask API)                               │
 ├───────────────────────┬──────────────────────────┬───────────────────────────────┤
-│    ADVISORY ENGINE    │   COMPUTER VISION ENGINE │     VERNACULAR LLM ENGINE     │
-│  - Static Rules & CADS│  - YOLOv8 Disease Model  │  - Anthropic Claude 3.5       │
-│  - Dynamic Agro Logic │  - Biological Treatments │  - Vernacular Voice/Text      │
+│    ADVISORY ENGINE    │  DEEP LEARNING CV ENGINE │     VERNACULAR LLM ENGINE     │
+│  - Static Rules & CADS│  - MobileNetV2 (5 Class) │  - Anthropic Claude 3.5       │
+│  - Dynamic Agro Logic │  - Safety Threshold (<60%)│ - Structured ML Context Pass  │
+│  - Regenerative Score │  - Organic Treatment DB  │  - Vernacular Voice/Text      │
 └───────────┬───────────┴────────────┬─────────────┴───────────────┬───────────────┘
             │                        │                             │
 ┌───────────▼────────────────────────▼─────────────────────────────▼───────────────┐
@@ -64,6 +66,69 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 │    NDVI Vegetation    │    Soil Telemetry        │  - Privacy Zero-PII Exchange  │
 └───────────────────────┴──────────────────────────┴───────────────────────────────┘
 ```
+
+---
+
+## 🔬 Deep Learning Groundnut Disease Classification
+
+AgriBridge includes a **trained Deep Convolutional Neural Network** model utilizing **MobileNetV2 Transfer Learning** trained on authentic groundnut leaf images (`datasets/groundnut/Raw_Data/`).
+
+### 1. Dataset Characteristics & Stratified Split
+- **Total Validated Images:** 3,058 high-resolution 1200×800 JPEG images.
+- **Corrupt / Duplicate Images:** 0 corrupt, 0 SHA-256 hash collisions.
+- **Split Ratio:** Reproducible 70% train / 15% validation / 15% untouched test set (Random Seed 42).
+
+| Class Name | Pathology / Condition | Train (70%) | Validation (15%) | Test (15%) | Total |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **`healthy leaf`** | Healthy Groundnut Foliage | 650 | 140 | 139 | **929** |
+| **`early_leaf_spot`** | Tikka Early Leaf Spot (*Cercospora arachidicola*) | 619 | 133 | 133 | **885** |
+| **`late leaf spot`** | Tikka Late Leaf Spot (*Phaeoisariopsis personata*) | 482 | 103 | 104 | **689** |
+| **`nutrition deficiency`**| Nutritional Chlorosis (Fe / Zn / N Deficiency) | 230 | 50 | 49 | **329** |
+| **`rust`** | Groundnut Leaf Rust (*Puccinia arachidis*) | 159 | 33 | 34 | **226** |
+| **Total** | | **2,140** | **459** | **459** | **3,058** |
+
+### 2. Model Performance on Untouched Test Set
+Evaluated strictly on the held-out 459 test images (no data leakage):
+- **Overall Test Accuracy:** **72.77%**
+- **Weighted Precision:** **0.7300**
+- **Weighted Recall:** **0.7277**
+- **Weighted F1-Score:** **0.7247**
+
+### 3. Confidence Thresholding & Safety Guardrails
+- **Safety Confidence Threshold:** Configurable (default `0.60` / 60%).
+- **High Confidence ($\ge 60\%$):** Displays predicted pathology, localized name, and biological remedies.
+- **Low Confidence ($< 60\%$):** Displays explicit uncertainty banner:
+  > *"⚠️ The model is not sufficiently confident. Please upload a clearer leaf image or consult an agricultural expert."*
+- **Agronomic Separation:** ML predictions are strictly separated from organic treatment protocols to ensure zero fabrication.
+
+---
+
+## 🤖 Claude 3.5 Sonnet / AgriAI Advisory Integration
+
+AgriBridge uses a 2-stage pipeline: **Computer Vision $\rightarrow$ LLM Advisory**:
+
+```
+Groundnut Leaf Photo
+       ↓
+MobileNetV2 Deep Classifier
+       ↓
+Disease Class + Confidence (e.g., Tikka Early Leaf Spot, 91.2%)
+       ↓
+Farm Telemetry (Soil, Weather, Sowing Date, Stage)
+       ↓
+Anthropic Claude 3.5 Sonnet / AgriAI
+       ↓
+Farmer-Friendly Vernacular Guidance
+```
+
+### Claude Explains 5 Practical Dimensions:
+1. **What the Diagnosis Means:** Crop impact, pathogen behavior, and photosynthetic loss.
+2. **What to Check in the Field:** Diagnostic checkpoints (e.g. yellow halo inspection, lower canopy leaf drop).
+3. **Immediate Actions:** Organic remedies (5% NSKE, *Trichoderma viride*, sour buttermilk spray).
+4. **Prevention & Monitoring:** Crop rotation, row spacing, and companion intercropping.
+5. **When to Consult an Expert:** Escalation criteria for Mandal Agricultural Officers / KVK scientists.
+
+*Guardrail:* Claude is explicitly prohibited by system prompt from altering or contradicting the ML classification.
 
 ---
 
@@ -90,14 +155,11 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 ### 3. 🔬 AI Crop Disease Diagnosis (Computer Vision)
 - **Multi-Format Upload**: Drag-and-drop file upload, file browser, or instant sample image loader.
 - **Sample Leaf Inspection**: Pre-loaded authentic groundnut leaf exhibiting early-stage *Cercospora* (Tikka) leaf spot.
-- **Neural Scanning Animation**: Real-time bounding box inspection overlay simulating YOLOv8 inference.
+- **Neural Scanning Animation**: Real-time scanning overlay with deep learning classification badge (`⚡ Groundnut Deep Learning (MobileNetV2)`).
 - **Detailed Agronomic Diagnostics**:
-  - **Pathology**: Early Leaf Spot (*Cercospora arachidicola*).
-  - **Confidence**: 87% model certainty.
-  - **Severity & Localization**: Early stage, lower canopy distribution.
-  - **Organic Biological Remedies**: 5% Neem Seed Kernel Extract (NSKE), *Trichoderma viride* foliar spray, diluted buttermilk solution.
-  - **Preventive Cultural Practices**: Deleafing infected lower foliage, drip irrigation timing to minimize canopy wetness duration.
-  - **KVK Escalation**: Direct protocol for reporting outbreaks to Mandal Agricultural Officers.
+  - **Pathology**: Early Leaf Spot, Late Leaf Spot, Rust, Nutrition Deficiency, or Healthy Foliage.
+  - **Confidence**: Model certainty meter with low-confidence safety alerts.
+  - **Organic Biological Remedies**: 5% Neem Seed Kernel Extract (NSKE), *Trichoderma viride* foliar spray, fermented buttermilk solution.
   - **Scan History Log**: Historical record of previous diagnostic evaluations.
 
 ### 4. 🌿 Regenerative Farming Planner
@@ -111,7 +173,7 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 - **Interactive Action Buttons**: Farmers can dynamically toggle practices into their active farm plan, instantly recalculating the composite regenerative score.
 
 ### 5. 🤖 "Ask AgriAI" Conversational Assistant
-- **Context-Aware Agro-Chat**: Interactive chat interface pre-seeded with Kurnool weather, soil, and crop telemetry.
+- **Context-Aware Agro-Chat**: Interactive chat interface pre-seeded with Kurnool weather, soil, IoT, and ML disease telemetry.
 - **Instant Quick Questions**: One-click queries for irrigation schedules, organic pesticide recipes, and fertilizer timing.
 - **Safety Disclaimers**: Strict guardrails advising laboratory verification for critical synthetic chemical inputs.
 
@@ -133,9 +195,6 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 - **Mobile-First Bottom Navigation**: Optimized for one-thumb navigation on sub-$100 Android smartphones.
 - **Local Caching**: Advisories and farm records persist in `localStorage` for offline access during network blackouts.
 
-### 9. 🧭 Built-in Interactive Guided Tour
-- **10-Step Onboarding Walkthrough**: Step-by-step interactive demo walking judges, developers, and farmers through the dashboard, telemetry, disease scanning, regenerative scoring, and BRICS cooperation tools.
-
 ---
 
 ## 📂 Repository Structure
@@ -144,7 +203,10 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 AgriBridge/
 ├── index.html                                 # Single-page application shell & semantic HTML5
 ├── dev_server.py                              # Zero-dependency Python development server
-├── .env.example                               # Environment credentials template
+├── run.py                                     # 1-Click All-in-One local launcher
+├── start.bat                                  # Windows double-click quick launcher
+├── schema.sql                                 # Standalone SQL schema for SQLite/PostgreSQL
+├── .gitignore                                 # Git safety (protects datasets, .keras/.pt weights, .env)
 ├── README.md                                  # Complete unified project documentation
 ├── ARCHITECTURE.md                            # Comprehensive technical architecture & CADS spec
 │
@@ -163,14 +225,6 @@ AgriBridge/
 │   │   ├── en.js                              # English dictionary
 │   │   ├── te.js                              # Complete Telugu (తెలుగు) dictionary
 │   │   └── hi.js                              # Complete Hindi (हिंदी) dictionary
-│   ├── data/
-│   │   ├── farm_boundary.geojson              # GeoJSON polygon for Kurnool pilot parcel
-│   │   ├── mockFarm.js                        # Farmer profile, soil type, and IoT sensor specs
-│   │   ├── mockWeather.js                     # 7-day forecast, 14-day history, and climate alerts
-│   │   ├── mockAdvisories.js                  # Categorized agronomic recommendations
-│   │   ├── mockDiagnosis.js                   # Disease pathology database & sample images
-│   │   ├── mockRegenerative.js                # Sustainable practices and scoring matrices
-│   │   └── mockBrics.js                       # BRICS 5-nation adapters and CADS specifications
 │   ├── services/
 │   │   ├── farmService.js                     # Farm profile CRUD with localStorage persistence
 │   │   ├── weatherService.js                  # Open-Meteo & IMD meteorological service
@@ -179,121 +233,154 @@ AgriBridge/
 │   │   ├── advisoryService.js                 # Rule evaluation engine & AgriAI chat query
 │   │   ├── diagnosisService.js                # Computer vision scanning & pathology engine
 │   │   └── bricsService.js                    # CADS cross-border data exchange simulator
-│   ├── components/
-│   │   ├── Header.js                          # Global header with location, language, and low-BW switch
-│   │   ├── Sidebar.js                         # Desktop navigation sidebar
-│   │   ├── MobileNav.js                       # Mobile bottom app navigation bar
-│   │   ├── FarmMap.js                         # Interactive SVG boundary visualizer & layer toggles
-│   │   ├── CropHealthChart.js                 # Multi-series SVG telemetry line chart
-│   │   ├── WeatherCard.js                     # Forecast cards with rainfall & irrigation advice
-│   │   ├── AdvisoryCard.js                    # Categorized advisory cards with WhatsApp share
-│   │   ├── ChatBot.js                         # "Ask AgriAI" interactive assistant
-│   │   ├── DiagnosisView.js                   # Photo dropzone, scanning overlay, and remedies
-│   │   ├── RegenerativeView.js                # Practice checklist and dynamic score gauge
-│   │   ├── NetworkGraph.js                    # Animated BRICS topology graph & CADS exchange
-│   │   ├── GuidedTour.js                      # 10-step guided onboarding modal
-│   │   └── Toast.js                           # Accessible notification toast system
-│   └── pages/
-│       ├── OverviewPage.js                    # Main farm summary, health charts, and advisories
-│       ├── MyFarmPage.js                      # Farm boundary map, IoT sensor node, and editor
-│       ├── AdvisoryPage.js                    # Advisory repository and AgriAI chat tab
-│       ├── WeatherPage.js                     # 10-day climate risk, weather forecast, and rainfall
-│       └── SettingsPage.js                    # Language, low-bandwidth, and offline cache settings
+│   └── components/
+│       ├── Header.js                          # Global header with location, language, and low-BW switch
+│       ├── FarmMap.js                         # Interactive SVG boundary visualizer & layer toggles
+│       ├── CropHealthChart.js                 # Multi-series SVG telemetry line chart
+│       ├── WeatherCard.js                     # Forecast cards with rainfall & irrigation advice
+│       ├── AdvisoryCard.js                    # Categorized advisory cards with WhatsApp share
+│       ├── ChatBot.js                         # "Ask AgriAI" interactive assistant
+│       ├── DiagnosisView.js                   # Photo dropzone, MobileNetV2 badge, remedies & warnings
+│       ├── RegenerativeView.js                # Practice checklist and dynamic score gauge
+│       └── NetworkGraph.js                    # Animated BRICS topology graph & CADS exchange
 │
 └── agrin-project/                             # AgriN Intelligent Backend & Knowledge Base
     ├── backend/
     │   ├── app.py                             # Flask API server entrypoint & route registration
     │   ├── config.py                          # Application configuration & environment loader
     │   ├── requirements.txt                   # Python backend dependencies
-    │   ├── .env.example                       # Backend environment template
+    │   ├── inspect_dataset.py                 # Dataset validation & inspection script
+    │   ├── train_groundnut_model.py           # End-to-end MobileNetV2 training & test evaluation
+    │   ├── model_weights/
+    │   │   ├── groundnut_class_names.json     # 5-class metadata and input configuration
+    │   │   └── groundnut_disease.keras        # Trained Keras model weights (local, git-ignored)
     │   ├── routes/
     │   │   ├── advisory.py                    # POST /advisory endpoint (automated & manual)
-    │   │   ├── diagnose.py                    # POST /diagnose & POST /api/diagnose (YOLOv8 vision)
-    │   │   └── soil_data.py                   # GET /api/soil-data & GET /api/weather-data
+    │   │   ├── diagnose.py                    # POST /api/v1/diagnoses (Normalized ML schema)
+    │   │   ├── sensor_data.py                 # POST /api/v1/sensors/telemetry
+    │   │   └── soil_data.py                   # GET /api/v1/soil & GET /api/v1/weather
     │   ├── engines/
     │   │   ├── advisory_engine.py             # Static rules engine & CADS payload generator
-    │   │   ├── disease_diagnosis.py           # YOLOv8 crop disease detector & remedies
+    │   │   ├── disease_diagnosis.py           # Multi-engine CV loader (MobileNetV2 / YOLOv8 / Heuristic)
     │   │   └── llm_advisory.py                # Anthropic Claude 3.5 vernacular localizer
     │   ├── data_sources/
     │   │   ├── satellite.py                   # Sentinel Hub / Bhuvan NDVI remote sensing
     │   │   ├── weather.py                     # Open-Meteo REST API weather integration
     │   │   └── soil.py                        # ISRIC SoilGrids 250m REST API integration
-    │   ├── schema/
-    │   │   ├── advisory_schema.json           # BRICS Common Agricultural Data Schema (CADS)
-    │   │   └── farm_boundary.geojson          # Pilot farm coordinates & geometry
-    │   ├── models/
-    │   │   └── yolov8_crop_disease.pt         # AgriGuard YOLOv8 model weights
-    │   ├── mqtt/
-    │   │   └── sensor_listener.py             # ESP32 MQTT telemetry subscriber
     │   └── tests/
+    │       ├── test_groundnut_model.py        # Real model inference, low-conf, and API tests
+    │       ├── test_v1_api.py                 # Full REST API v1 test suite
     │       ├── test_advisory.py               # Advisory engine unit tests
-    │       ├── test_disease_diagnosis.py      # Computer vision pipeline tests
+    │       ├── test_diagnosis.py              # Vision pipeline tests
+    │       ├── test_live_sources.py           # Live telemetry sources tests
     │       └── test_llm_advisory.py           # Claude localizer verification tests
-    ├── knowledge_base/
-    │   └── agronomy_notes/
-    │       └── principles.md                  # Core regenerative principles & regional matrices
     └── docs/
-        └── PROJECT_BRIEF.md                   # Hackathon Track 4 problem statement & roadmap
+        ├── groundnut_dataset_inspection_report.md  # Phase 1 dataset validation report
+        ├── groundnut_training_evaluation_report.md # Phase 2 & 3 model evaluation report
+        ├── groundnut_evaluation_results.json       # Numeric test metrics & per-class F1
+        └── groundnut_confusion_matrix.png          # Visualized confusion matrix heatmap
 ```
 
 ---
 
 ## ⚡ Quickstart Guide
 
-### Option 1: Running the Frontend (Zero Dependencies)
+### Option 1: 1-Click All-in-One Runner (Recommended)
 
-AgriBridge is built with native ES6+ JavaScript modules and standard CSS—**no npm, Webpack, or Node.js required**.
+From the project root directory:
+```bash
+python run.py
+```
+*(On Windows, you can simply double-click `start.bat`).*
+
+This automatically starts both the Flask Backend (`http://127.0.0.1:5000`) and Frontend Dev Server (`http://localhost:3000`).
+
+---
+
+### Option 2: Running the Frontend (Zero Dependencies)
+
+AgriBridge frontend is built with native ES6+ JavaScript modules and standard CSS—**no npm, Webpack, or Node.js required**.
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/mahammedsathyala/AgriBridge.git
-cd AgriBridge
-
-# 2. Start the built-in Python server
+# Start the built-in Python dev server
 python dev_server.py
 ```
-
 Open your browser to: **`http://localhost:3000`**
 
 ---
 
-### Option 2: Running the Full-Stack AgriN Backend
-
-To enable live automated satellite ingestion, YOLOv8 disease inference, and Claude LLM vernacular localization:
+### Option 3: Running Backend Independently
 
 ```bash
-# 1. Navigate to the backend directory
 cd agrin-project/backend
 
-# 2. Create and activate a Python virtual environment
+# Create virtual environment
 python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
+venv\Scripts\activate       # On Windows
+source venv/bin/activate    # On macOS/Linux
 
-# 3. Install required dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure environment variables
-cp .env.example .env
-# Edit .env with your ANTHROPIC_API_KEY, SENTINEL_API_KEY, etc. (optional for mock fallback)
-
-# 5. Start the Flask API server
+# Start Flask API server
 python app.py
 ```
-
 The AgriN backend runs at **`http://localhost:5000`**.
 
 ---
 
 ## 📡 AgriN Backend API Reference
 
-### 1. Automated Advisory by GPS Coordinates (`POST /advisory`)
-Pulls real-time meteorological conditions from Open-Meteo, soil profile from ISRIC SoilGrids 250m, and canopy NDVI from Sentinel-2.
+### 1. Crop Disease Diagnosis (`POST /api/v1/diagnoses`)
+Accepts multipart image upload or JSON Base64 string. Returns normalized diagnostic response with deep learning predictions and biological remedies:
 
 ```bash
-curl -X POST http://localhost:5000/advisory \
+curl -X POST http://localhost:5000/api/v1/diagnoses \
+  -F "image=@src/assets/sample_leaf.jpg" \
+  -F "crop_name=groundnut"
+```
+
+#### Normalized JSON Response:
+```json
+{
+  "status": "success",
+  "crop": "groundnut",
+  "disease": "early_leaf_spot",
+  "confidence": 0.9124,
+  "diagnosis_source": "groundnut_trained_model",
+  "model_status": "LIVE",
+  "recommendation": "Foliar spray of 5% Neem Seed Kernel Extract (NSKE) every 10-12 days during active infection.\nApply biocontrol agent Trichoderma viride or Pseudomonas fluorescens (10g / L water) to foliage and root zone.\nSpray fermented sour buttermilk (1:10 dilution with water) mixed with garlic extract as a natural bio-fungicide.\nCollect and compost fallen diseased leaves deeply to prevent spore re-infection during dew hours.",
+  "warning": "",
+  "data": {
+    "scan_id": "SCAN-1",
+    "crop": "groundnut",
+    "disease": "early_leaf_spot",
+    "disease_detected": "Tikka Early Leaf Spot (Cercospora arachidicola)",
+    "confidence_score": 91.2,
+    "diagnosis_source": "groundnut_trained_model",
+    "model_status": "LIVE",
+    "condition_en": "Tikka Early Leaf Spot (Cercospora arachidicola)",
+    "condition_te": "తొలి ఆకు మచ్చ వ్యాధి - టిక్కా తెగులు (Cercospora arachidicola)",
+    "condition_hi": "टिक्का अगेती पत्ती धब्बा रोग (Early Leaf Spot)"
+  }
+}
+```
+
+*When confidence $< 0.60$ (or noisy/non-leaf input):*
+```json
+{
+  "confidence": 0.4812,
+  "warning": "The model is not sufficiently confident. Please upload a clearer leaf image or consult an agricultural expert."
+}
+```
+
+---
+
+### 2. Automated Crop Advisory (`POST /api/v1/advisories`)
+Combines IoT sensor telemetry, SoilGrids 250m soil chemistry, Open-Meteo weather, Sentinel-2 NDVI, and ML disease findings:
+
+```bash
+curl -X POST http://localhost:5000/api/v1/advisories \
   -H "Content-Type: application/json" \
   -d '{
     "latitude": 15.8281,
@@ -303,264 +390,51 @@ curl -X POST http://localhost:5000/advisory \
   }'
 ```
 
-<details>
-<summary><b>View Sample JSON Response</b></summary>
-
-```json
-{
-  "status": "success",
-  "version": "1.0.0-mvp2",
-  "timestamp": "2026-09-22T06:30:00Z",
-  "telemetry": {
-    "weather": {
-      "temperature_c": 31.4,
-      "humidity_pct": 68,
-      "precipitation_forecast_3d_mm": 18.2
-    },
-    "soil": {
-      "texture": "Red Loam",
-      "organic_carbon_pct": 0.48,
-      "ph": 6.8
-    },
-    "vegetation": {
-      "ndvi": 0.62,
-      "canopy_status": "Healthy / Flowering"
-    }
-  },
-  "recommendations": [
-    {
-      "category": "Irrigation Management",
-      "priority": "HIGH",
-      "action": "Defer drip irrigation by 24-36 hours ahead of incoming convective rainfall",
-      "rationale": "Forecast shows 18mm rainfall; deferring irrigation avoids waterlogging and prevents root asphyxiation.",
-      "regenerative_benefit": "Conserves groundwater reserves and reduces nitrogen leaching."
-    },
-    {
-      "category": "Pest & Disease Prevention",
-      "priority": "MEDIUM",
-      "action": "Foliar spray of 5% Neem Seed Kernel Extract (NSKE)",
-      "rationale": "Moderate canopy humidity (68%) during flowering creates conditions for Cercospora spore germination.",
-      "regenerative_benefit": "Safe for pollinators and maintains predatory insect populations."
-    }
-  ]
-}
-```
-</details>
-
 ---
 
-### 2. Crop Disease Diagnosis (`POST /diagnose` or `POST /api/diagnose`)
-Analyzes a leaf photograph (multipart/form-data or Base64 JSON) using the YOLOv8 vision engine and pairs detected pathologies with regenerative biological remedies.
+### 3. Vernacular Localizer (`POST /api/v1/localizations`)
+Synthesizes conversational, audio-ready vernacular briefings via Anthropic Claude 3.5 in **Telugu (`te`)**, **Hindi (`hi`)**, and **English (`en`)**:
 
 ```bash
-# Using multipart file upload:
-curl -X POST http://localhost:5000/diagnose \
-  -F "image=@src/assets/sample_leaf.jpg" \
-  -F "crop_name=Groundnut"
-```
-
-Or using JSON Base64 payload:
-```bash
-curl -X POST http://localhost:5000/diagnose \
-  -H "Content-Type: application/json" \
-  -d '{
-    "image_base64": "<base64_encoded_jpeg>",
-    "crop_name": "Groundnut"
-  }'
-```
-
-**Supported Pathologies & Treatments:**
-- **Tikka Leaf Spot (*Cercospora arachidicola*)**: 5% Neem Seed Kernel Extract (NSKE) + *Trichoderma viride* foliar spray.
-- **Leaf Rust (*Puccinia arachidis*)**: Elemental sulfur dusting (20-25 kg/ha) + fermented bio-dung wash.
-- **Bacterial Blight (*Xanthomonas*)**: Fresh cow dung filtrate (20% natural phage suspension) + copper barrier.
-- **Powdery Mildew**: Dilute cow milk spray (1:9 ratio for photo-activated lactoferrin bio-inhibition).
-- **Healthy Canopy**: Prophylactic vermiwash (10%) and soil mulch maintenance.
-
----
-
-### 3. Multilingual Vernacular Localizer (`POST /localize`)
-Leverages Anthropic Claude 3.5 to translate complex agronomic advisories into respectful, conversational, audio-ready vernacular scripts in **Telugu (`te`)**, **Hindi (`hi`)**, **English (`en`)**, **Portuguese (`pt`)**, **Russian (`ru`)**, or **Mandarin (`zh`)**.
-
-```bash
-curl -X POST http://localhost:5000/localize \
+curl -X POST http://localhost:5000/api/v1/localizations \
   -H "Content-Type: application/json" \
   -d '{
     "language": "te",
-    "advisory_data": {
-      "recommendations": [
-        {
-          "action": "వర్ష సూచన ఉన్నందున నేడు డ్రిప్ నీటిపారుదల నిలిపివేయండి.",
-          "practice": "వేప నూనె 5% పిచికారీ చేయండి."
-        }
-      ]
-    },
-    "farmer_profile": {
-      "farmer_name": "సత్యాల గారు",
-      "crop": "వేరుశనగ",
-      "acres": 2.5
-    }
+    "query": "నా వేరుశనగ పంటలో ఆకు మచ్చలు ఉన్నాయి, ఏమి చేయాలి?"
   }'
 ```
-
----
-
-## 🌾 Regenerative Agriculture Principles
-
-AgriBridge embeds five fundamental ecological principles into every advisory and score calculation:
-
-1. **🌱 Continuous Living Roots**: Maintaining live root systems across Kharif, Rabi, and summer cycles builds liquid carbon pathways, fuels rhizosphere biology, and stabilizes soil aggregates.
-2. **🛡️ Soil Armor (Mulching & Ground Cover)**: Keeping topsoil continuously shaded with crop residue or companion legumes prevents thermal sterilization from direct sunlight and cushions heavy rainfall impacts.
-3. **🐝 Biological Diversity**: Diverse plant architectures (Groundnut + Pigeon Pea 6:1 intercrop) break monoculture pest and pathogen cycles while providing varied food sources for pollinators.
-4. **🚜 Minimal Soil Disturbance**: Transitioning from deep inversion plowing to zero or shallow conservation tillage preserves mycorrhizal fungal networks (*Glomalin*) and locks soil organic carbon (SOC).
-5. **🐄 Organic Integration & Soil Biology**: Application of farmyard manure, vermicompost, *Rhizobium*, and biochar accelerates humus synthesis and restores natural soil fertility.
-
----
-
-## 🔒 Security, Privacy & Responsible AI
-
-- **🛡️ Zero Personal Farmer PII**: No farmer names, national ID numbers, or financial identifiers are ever transmitted across external network boundaries.
-- **📍 GPS Coordinate Fuzzing**: Farm coordinates are rounded to approximate 10 km² regional bounding boxes before cross-border CADS exchange.
-- **⚠️ Human-in-the-Loop Safeguards**: AI advisories are explicitly labeled as **decision support tools**. Warnings are displayed advising consultation with local Krishi Vigyan Kendra (KVK) agronomy scientists before purchasing or applying critical treatments.
-
----
-
-## 🔌 Frontend & Backend Integration Architecture
-
-AgriBridge establishes a robust end-to-end integration between the **Vanilla ES6 Browser Frontend** and the **Python Flask AgriN Backend**:
-
-```
-[ ESP32 Soil Node ] ──> (MQTT Broker) ──> [ Flask Backend Listener ]
-                                                    │
-                                                    ▼
-                                           [ SQLite DB / Cache ]
-                                                    │
-                                                    ▼
-                                            [ REST API v1.0 ]
-                                            (http://localhost:5000)
-                                                    ▲
-                                                    │  JSON / Multipart (via apiClient)
-                                                    ▼
-                                          [ AgriBridge Frontend ]
-                                          (GitHub Pages / Local Dev)
-```
-
-### 📡 Standardized v1 REST Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/health` | Backend health & uptime timestamp (ISO-8601 UTC) |
-| `POST` | `/api/v1/advisories` | Generates crop advisories combining ESP32 sensor, weather, soil, and satellite data |
-| `GET` | `/api/v1/advisories/history` | Historical recommendations and farmer completion status |
-| `POST` | `/api/v1/advisories/complete` | Mark an advisory recommendation as completed / toggled |
-| `POST` | `/api/v1/diagnoses` | Leaf image upload (multipart / base64) for YOLOv8 disease screening |
-| `GET` | `/api/v1/diagnoses/history` | Diagnostic scan history with confidence and organic remedies |
-| `POST` | `/api/v1/sensors/telemetry` | Ingest real-time ESP32 IoT sensor telemetry packets |
-| `GET` | `/api/v1/farms/<id>/sensors/latest` | Latest ESP32 readings with online/stale/offline freshness detection |
-| `GET` | `/api/v1/farms/<id>/sensors/history` | Telemetry packet history for trend charting |
-| `GET` | `/api/v1/weather?lat=..&lon=..` | Live Open-Meteo meteorological feed and drought indices |
-| `GET` | `/api/v1/soil?lat=..&lon=..` | ISRIC SoilGrids 250m soil chemistry and physical profile |
-| `GET` | `/api/v1/satellite?lat=..&lon=..` | Sentinel-2 L2A multispectral NDVI and canopy vigor |
-| `GET` / `POST` | `/api/v1/farm` | Farm profile parameters (farmer name, parcel area, crop, sowing date) |
-| `POST` | `/api/v1/localizations` | Vernacular LLM plain-language voice/text script synthesis |
-
----
-
-## 🚀 Running AgriBridge Locally
-
-You can launch AgriBridge using either the **1-Click All-in-One Runner** or **Separate Terminals**:
-
-### Option 1: ⚡ 1-Click All-in-One Runner (Recommended)
-
-From the project root folder:
-```bash
-python run.py
-```
-*(On Windows, you can also simply double-click `start.bat` in File Explorer).*
-
-This script automatically:
-1. Spawns the **Python Flask Backend** on `http://127.0.0.1:5000`
-2. Spawns the **Frontend Dev Server** on `http://localhost:3000`
-3. Opens `http://localhost:3000` directly in your default browser.
-
----
-
-### Option 2: 🖥️ Separate Terminals
-
-#### Terminal 1 — Backend (Port 5000)
-```bash
-cd agrin-project/backend
-
-# Install dependencies (first time only)
-pip install -r requirements.txt
-
-# Run Flask server
-python app.py
-```
-> API will run on `http://localhost:5000`  
-> Health check: `http://localhost:5000/api/v1/health`
-
-#### Terminal 2 — Frontend (Port 3000)
-```bash
-# In the root repository directory:
-python dev_server.py
-```
-> Open browser at: `http://localhost:3000`
-
----
-
-## 🗄️ Database Architecture & Schema
-
-AgriBridge uses a lightweight SQLite database (`agrin-project/backend/agrin.db`) managed through SQLAlchemy models with a standalone DDL file provided for PostgreSQL / MySQL / SQLite migrations:
-- **Standalone SQL Schema**: [`schema.sql`](schema.sql) and [`agrin-project/backend/schema.sql`](agrin-project/backend/schema.sql)
-- **Python ORM Models**: [`agrin-project/backend/models.py`](agrin-project/backend/models.py)
-
-### Core Database Tables
-
-| Table Name | Description | Key Fields & Indexes |
-|---|---|---|
-| `farm_profiles` | Registered farm profile & agronomic details | Farmer name, location, GPS lat/lng, crop (Groundnut K6), soil, irrigation |
-| `sensor_telemetry` | ESP32 IoT sensor telemetry log | Soil moisture %, soil depth, soil temp, canopy temp, ambient temp, humidity, battery %, recorded_at |
-| `diagnosis_records` | AI computer vision crop disease log | Farm ID, crop, disease pathology, confidence score, image reference |
-| `advisory_records` | Generated agronomic advisories & status | Farm ID, recommendation text, source (rules/LLM), completed boolean |
-| `data_exchange_logs` | BRICS CADS decentralized audit trail | Source node, target node, CADS indicator, JSON payload, created_at |
-
----
-
-## 🌐 Production Deployment Requirements
-
-### GitHub Pages (Frontend)
-- **Frontend URL**: `https://mahammedsathyala.github.io/AgriBridge/`
-- Since GitHub Pages serves static files, configure `public/config.js` to point to your hosted backend:
-  ```javascript
-  window.APP_CONFIG = {
-    API_BASE_URL: "https://your-backend-domain.com"
-  };
-  ```
-
-### Backend Deployment (Render / Fly.io / AWS / VPS)
-- Deploy `agrin-project/backend/` as a Python Flask service (Gunicorn / uWSGI).
-- Set environment variable `CORS_ORIGINS=https://mahammedsathyala.github.io`.
-- When the backend is offline or unreachable, the frontend automatically activates **Demo Data Active** mode with explicit mock fallbacks and a one-click **Retry** button.
 
 ---
 
 ## 🧪 Testing & Verification
 
-Automated unit and integration test suites are included for all backend engines:
+Automated test suites cover all backend engines, deep learning inference, REST API endpoints, and safety thresholds:
 
 ```bash
 cd agrin-project/backend
 python -m pytest tests/ -v
 ```
 
-**Results**: 50/50 tests passing (100% pass rate).
+**Result: 68 / 68 tests passing (100% pass rate)**
 
-Test coverage includes:
-- `test_v1_api.py`: Full REST v1 test suite (health check, CORS headers, advisory engine with sensor data, sensor telemetry POST & GET latest & history, invalid payloads, stale sensor status degradation, disease diagnosis multipart & base64, weather/soil/satellite endpoints, error formats).
-- `test_advisory.py`: Static rules engine, parameter parsing, and recommendation ranking.
-- `test_diagnosis.py`: YOLOv8 image processing pipeline and pathology resolution.
-- `test_live_sources.py`: Live weather, soil, and satellite data ingestion.
-- `test_llm_advisory.py`: Claude prompt formation, language fallback, and payload sanitization.
+| Test Module | Coverage | Status |
+| :--- | :--- | :---: |
+| [`test_groundnut_model.py`](agrin-project/backend/tests/test_groundnut_model.py) | Keras model inference on real images, 5 classes, low confidence safety warning, multipart & Base64 API | ✅ PASSED (6/6) |
+| [`test_v1_api.py`](agrin-project/backend/tests/test_v1_api.py) | Full REST v1 API contracts, health, CORS, telemetry, error formats | ✅ PASSED (16/16) |
+| [`test_audit_fixes.py`](agrin-project/backend/tests/test_audit_fixes.py) | Transparency audit, weights status reporting, regenerative scoring | ✅ PASSED (8/8) |
+| [`test_advisory.py`](agrin-project/backend/tests/test_advisory.py) | Rules engine, parameter parsing, recommendation ranking | ✅ PASSED (9/9) |
+| [`test_diagnosis.py`](agrin-project/backend/tests/test_diagnosis.py) | Computer vision engine & pathology resolution | ✅ PASSED (8/8) |
+| [`test_live_sources.py`](agrin-project/backend/tests/test_live_sources.py) | Live Open-Meteo, SoilGrids, and Sentinel NDVI ingestion | ✅ PASSED (10/10) |
+| [`test_llm_advisory.py`](agrin-project/backend/tests/test_llm_advisory.py) | Claude prompt formation, language fallback, ML context pass | ✅ PASSED (11/11) |
+
+---
+
+## 🔒 Security, Privacy & Responsible AI
+
+- **🛡️ Zero Farmer PII**: No farmer names, national ID numbers, or financial identifiers are ever transmitted across external network boundaries.
+- **📍 GPS Coordinate Fuzzing**: Farm coordinates are rounded to approximate 10 km² regional bounding boxes before cross-border CADS exchange.
+- **⚠️ Safety Confidence Thresholds**: Low-confidence ML predictions trigger explicit uncertainty warnings and prompt laboratory or extension officer consultation.
+- **📦 Dataset & Weight Safety**: Raw image datasets (`datasets/`) and large binary weights (`*.keras`, `*.pt`, `*.h5`) are strictly `.gitignore`d to prevent accidental repository bloat or credential leakage.
 
 ---
 
@@ -574,4 +448,3 @@ This project is licensed under the **MIT License** — see the `LICENSE` file fo
 - **ISRIC SoilGrids**: Global high-resolution digital soil mapping data (250m REST API).
 - **Open-Meteo**: Free weather forecast and historical reanalysis APIs.
 - **Copernicus Sentinel-2 & ISRO Bhuvan**: Open satellite remote sensing data for vegetation indices.
-
