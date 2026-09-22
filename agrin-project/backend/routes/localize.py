@@ -1,8 +1,12 @@
 """
-AgriN Advisory Localization Route (MVP 4)
------------------------------------------
+AgriN Advisory Localization Route (v1 Standardized API)
+--------------------------------------------------------
 Translates complex agronomic telemetry and disease detections into
 short, plain-language vernacular voice/text scripts for smallholder farmers.
+Endpoints:
+  POST /api/v1/localizations
+  POST /localize
+  POST /api/localize
 """
 
 from datetime import datetime, timezone
@@ -14,41 +18,19 @@ localize_bp = Blueprint("localize", __name__)
 
 @localize_bp.route("/localize", methods=["GET"])
 @localize_bp.route("/api/localize", methods=["GET"])
+@localize_bp.route("/api/v1/localizations", methods=["GET"])
 def localize_info():
     """Returns endpoint documentation and supported languages."""
     return jsonify({
         "service": "AgriN LLM Localisation API",
-        "stage": "MVP 4: Anthropic Claude Multilingual Localization Active",
+        "version": "1.0.0",
         "method": "POST",
-        "endpoints": ["/localize", "/api/localize"],
-        "supported_languages": SUPPORTED_LANGUAGES,
-        "sample_payload": {
-            "language": "te (or hi, en, pt, ru, zh)",
-            "advisory_data": {
-                "recommendations": [
-                    {
-                        "crop": "Pearl Millet (Bajra)",
-                        "companion_crop": "Cowpea",
-                        "soil_regeneration_practices": ["Residue retention mulching"]
-                    }
-                ]
-            },
-            "diagnosis_data": {
-                "primary_diagnosis": {
-                    "condition": "Tikka Leaf Spot",
-                    "confidence": "92.0%"
-                },
-                "organic_treatment_plan": ["5% Neem Seed Kernel Extract (NSKE) foliar spray"]
-            },
-            "farmer_profile": {
-                "farmer_name": "Sathyala",
-                "landholding_acres": 2.5,
-                "irrigation": "Rainfed"
-            }
-        }
+        "endpoints": ["/api/v1/localizations", "/localize", "/api/localize"],
+        "supported_languages": SUPPORTED_LANGUAGES
     }), 200
 
 
+@localize_bp.route("/api/v1/localizations", methods=["POST"])
 @localize_bp.route("/localize", methods=["POST"])
 @localize_bp.route("/api/localize", methods=["POST"])
 def localize_advisory():
@@ -58,6 +40,7 @@ def localize_advisory():
     if not request.is_json:
         return jsonify({
             "status": "error",
+            "code": "INVALID_CONTENT_TYPE",
             "error_code": "INVALID_CONTENT_TYPE",
             "message": "Request body must be valid JSON."
         }), 400
@@ -68,23 +51,32 @@ def localize_advisory():
     language = data.get("language") or data.get("lang") or "en"
     farmer_profile = data.get("farmer_profile")
 
-    if not advisory_data and not diagnosis_data:
+    # Also support top-level query / prompt directly
+    if not advisory_data and not diagnosis_data and not data.get("query"):
         return jsonify({
             "status": "error",
+            "code": "MISSING_SOURCE_DATA",
             "error_code": "MISSING_SOURCE_DATA",
-            "message": "Must provide either 'advisory_data' (from /advisory) or 'diagnosis_data' (from /diagnose)."
+            "message": "Must provide either 'advisory_data' (from /advisory), 'diagnosis_data' (from /diagnose), or 'query'."
         }), 400
 
     result = llm_localizer.generate_plain_advisory(
-        advisory_data=advisory_data,
+        advisory_data=advisory_data or {"query": data.get("query"), "crop": data.get("crop_name", "Groundnut")},
         diagnosis_data=diagnosis_data,
         language=language,
         farmer_profile=farmer_profile
     )
 
     response = {
+        "status": "success",
+        "schema_version": "1.0.0",
+        "request_id": f"req-loc-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')[:17]}",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_sources": ["Anthropic Claude Multilingual Localization Engine", "ICAR Multilingual Glossaries"],
+        "warnings": [],
+        "data": result,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "4.0.0-mvp4",
+        "version": "1.0.0",
         **result
     }
     return jsonify(response), 200

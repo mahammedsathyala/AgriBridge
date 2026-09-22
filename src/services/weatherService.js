@@ -1,7 +1,7 @@
 import { mockWeatherData } from '../data/mockWeather.js';
 import { farmService } from './farmService.js';
-
-const API_BASE = 'http://localhost:5000';
+import { apiClient } from './apiClient.js';
+import { USE_MOCK_FALLBACK } from '../config.js';
 
 export const weatherService = {
   async getCoordinates() {
@@ -13,53 +13,63 @@ export const weatherService = {
     } catch (e) {
       console.warn("Could not retrieve farm coordinates for weatherService:", e);
     }
-    return { lat: 14.7384, lng: 78.9928 };
+    return { lat: 15.8281, lng: 78.0373 };
   },
 
   async getCurrentWeather(coords = null) {
     try {
       const { lat, lng } = coords || await this.getCoordinates();
-      const res = await fetch(`${API_BASE}/api/weather-data?lat=${lat}&lon=${lng}`, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) {
-        const live = await res.json();
-        if (live && live.status === 'success' && live.live_telemetry) {
-          const t = live.live_telemetry;
-          return {
-            ...mockWeatherData.current,
-            tempC: t.temperature_c ?? mockWeatherData.current.tempC,
-            condition: live.derived_agro_weather
-              ? (live.derived_agro_weather.charAt(0).toUpperCase() + live.derived_agro_weather.slice(1))
-              : mockWeatherData.current.condition,
-            relativeHumidity: t.relative_humidity_percent ?? mockWeatherData.current.relativeHumidity,
-            windSpeedKmph: t.wind_speed_kmh ?? mockWeatherData.current.windSpeedKmph,
-            precipitationMm: t.precipitation_mm ?? mockWeatherData.current.precipitationMm
-          };
-        }
+      const data = await apiClient.get(`/api/v1/weather?lat=${lat}&lon=${lng}`);
+      const live = data?.data || data;
+
+      if (live && (live.status === 'success' || live.live_telemetry)) {
+        const t = live.live_telemetry || {};
+        return {
+          ...mockWeatherData.current,
+          temp: t.temperature_c ?? mockWeatherData.current.temp,
+          tempC: t.temperature_c ?? mockWeatherData.current.tempC,
+          condition: live.derived_agro_weather
+            ? (live.derived_agro_weather.charAt(0).toUpperCase() + live.derived_agro_weather.slice(1))
+            : mockWeatherData.current.condition,
+          humidity: t.relative_humidity_percent ?? mockWeatherData.current.humidity,
+          relativeHumidity: t.relative_humidity_percent ?? mockWeatherData.current.relativeHumidity,
+          windSpeedKmH: t.wind_speed_kmh ?? mockWeatherData.current.windSpeedKmH,
+          windSpeedKmph: t.wind_speed_kmh ?? mockWeatherData.current.windSpeedKmph,
+          precipitationMm: t.precipitation_mm ?? mockWeatherData.current.precipitationMm,
+          dataSource: "Live (Open-Meteo API)"
+        };
       }
     } catch (err) {
-      // Graceful fallback to mock data on network error
+      if (!USE_MOCK_FALLBACK) throw err;
     }
-    return { ...mockWeatherData.current };
+    return { ...mockWeatherData.current, dataSource: "Demo Mode" };
   },
 
   async get5DayForecast(coords = null) {
     try {
       const { lat, lng } = coords || await this.getCoordinates();
-      const res = await fetch(`${API_BASE}/api/weather-data?lat=${lat}&lon=${lng}`, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) {
-        const live = await res.json();
-        if (live && live.status === 'success') {
-          // Weather forecast live connection succeeded
+      const data = await apiClient.get(`/api/v1/weather?lat=${lat}&lon=${lng}`);
+      const live = data?.data || data;
+
+      if (live && (live.status === 'success' || live.daily_forecast)) {
+        const daily = live.daily_forecast;
+        if (Array.isArray(daily) && daily.length > 0) {
+          return daily.map((d, i) => ({
+            dayName: d.day_name || (i === 0 ? "Today" : (i === 1 ? "Tomorrow" : `Day ${i + 1}`)),
+            dayNameTe: d.day_name_te || (i === 0 ? "ఈ రోజు" : (i === 1 ? "రేపు" : `రోజు ${i + 1}`)),
+            date: d.date || "Upcoming",
+            dateTe: d.date || "రాబోయే",
+            icon: d.precipitation_sum_mm > 5 ? "🌧️" : (d.precipitation_sum_mm > 0 ? "🌦️" : "⛅"),
+            maxTemp: Math.round(d.temperature_max_c ?? 32),
+            minTemp: Math.round(d.temperature_min_c ?? 23),
+            rainProbPercent: Math.round(d.precipitation_probability_max ?? (d.precipitation_sum_mm > 0 ? 60 : 15)),
+            rainMm: parseFloat((d.precipitation_sum_mm ?? 0).toFixed(1)),
+            highlight: (d.precipitation_sum_mm ?? 0) > 10
+          }));
         }
       }
     } catch (err) {
-      // Graceful fallback to mock data
+      if (!USE_MOCK_FALLBACK) throw err;
     }
     return [...mockWeatherData.forecast];
   },

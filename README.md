@@ -424,30 +424,107 @@ AgriBridge embeds five fundamental ecological principles into every advisory and
 
 ---
 
+## 🔌 Frontend & Backend Integration Architecture
+
+AgriBridge establishes a robust end-to-end integration between the **Vanilla ES6 Browser Frontend** and the **Python Flask AgriN Backend**:
+
+```
+[ ESP32 Soil Node ] ──> (MQTT Broker) ──> [ Flask Backend Listener ]
+                                                    │
+                                                    ▼
+                                           [ SQLite DB / Cache ]
+                                                    │
+                                                    ▼
+                                            [ REST API v1.0 ]
+                                            (http://localhost:5000)
+                                                    ▲
+                                                    │  JSON / Multipart (via apiClient)
+                                                    ▼
+                                          [ AgriBridge Frontend ]
+                                          (GitHub Pages / Local Dev)
+```
+
+### 📡 Standardized v1 REST Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/health` | Backend health & uptime timestamp (ISO-8601 UTC) |
+| `POST` | `/api/v1/advisories` | Generates crop advisories combining ESP32 sensor, weather, soil, and satellite data |
+| `GET` | `/api/v1/advisories/history` | Historical recommendations and farmer completion status |
+| `POST` | `/api/v1/advisories/complete` | Mark an advisory recommendation as completed / toggled |
+| `POST` | `/api/v1/diagnoses` | Leaf image upload (multipart / base64) for YOLOv8 disease screening |
+| `GET` | `/api/v1/diagnoses/history` | Diagnostic scan history with confidence and organic remedies |
+| `POST` | `/api/v1/sensors/telemetry` | Ingest real-time ESP32 IoT sensor telemetry packets |
+| `GET` | `/api/v1/farms/<id>/sensors/latest` | Latest ESP32 readings with online/stale/offline freshness detection |
+| `GET` | `/api/v1/farms/<id>/sensors/history` | Telemetry packet history for trend charting |
+| `GET` | `/api/v1/weather?lat=..&lon=..` | Live Open-Meteo meteorological feed and drought indices |
+| `GET` | `/api/v1/soil?lat=..&lon=..` | ISRIC SoilGrids 250m soil chemistry and physical profile |
+| `GET` | `/api/v1/satellite?lat=..&lon=..` | Sentinel-2 L2A multispectral NDVI and canopy vigor |
+| `GET` / `POST` | `/api/v1/farm` | Farm profile parameters (farmer name, parcel area, crop, sowing date) |
+| `POST` | `/api/v1/localizations` | Vernacular LLM plain-language voice/text script synthesis |
+
+---
+
+## 🚀 Running AgriBridge Locally
+
+### 1. Start the Flask Backend
+```bash
+cd agrin-project/backend
+# Install dependencies
+pip install -r requirements.txt
+# Run the backend server
+python app.py
+```
+Backend will start on `http://localhost:5000`. Verify health:
+```bash
+curl http://localhost:5000/api/v1/health
+```
+
+### 2. Start the Frontend Dashboard
+In a separate terminal at the repository root:
+```bash
+# Using Python dev server
+python dev_server.py
+# Or using standard static server on port 3000:
+# python -m http.server 3000
+```
+Open your browser at `http://localhost:3000`.
+
+---
+
+## 🌐 Production Deployment Requirements
+
+### GitHub Pages (Frontend)
+- **Frontend URL**: `https://mahammedsathyala.github.io/AgriBridge/`
+- Since GitHub Pages serves static files, configure `public/config.js` to point to your hosted backend:
+  ```javascript
+  window.APP_CONFIG = {
+    API_BASE_URL: "https://your-backend-domain.com"
+  };
+  ```
+
+### Backend Deployment (Render / Fly.io / AWS / VPS)
+- Deploy `agrin-project/backend/` as a Python Flask service (Gunicorn / uWSGI).
+- Set environment variable `CORS_ORIGINS=https://mahammedsathyala.github.io`.
+- When the backend is offline or unreachable, the frontend automatically activates **Demo Data Active** mode with explicit mock fallbacks and a one-click **Retry** button.
+
+---
+
 ## 🧪 Testing
 
 Automated unit and integration test suites are included for all backend engines:
 
 ```bash
 cd agrin-project/backend
-pytest tests/ -v
+python -m pytest tests/ -v
 ```
 
 Test coverage includes:
+- `test_v1_api.py`: Full REST v1 test suite (health check, CORS headers, advisory engine with sensor data, sensor telemetry POST & GET latest & history, invalid payloads, stale sensor status degradation, disease diagnosis multipart & base64, weather/soil/satellite endpoints, error formats).
 - `test_advisory.py`: Static rules engine, parameter parsing, and recommendation ranking.
-- `test_disease_diagnosis.py`: YOLOv8 image processing pipeline and pathology resolution.
+- `test_diagnosis.py`: YOLOv8 image processing pipeline and pathology resolution.
+- `test_live_sources.py`: Live weather, soil, and satellite data ingestion.
 - `test_llm_advisory.py`: Claude prompt formation, language fallback, and payload sanitization.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-1. Fork the repository (`https://github.com/mahammedsathyala/AgriBridge`).
-2. Create your feature branch (`git checkout -b feature/NewFeature`).
-3. Commit your changes (`git commit -m "feat: add NewFeature"`).
-4. Push to the branch (`git push origin feature/NewFeature`).
-5. Open a Pull Request.
 
 ---
 

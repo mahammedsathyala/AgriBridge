@@ -1,4 +1,5 @@
 import { bricsCountries, bricsNetworkGraph, sampleDataExchangePayload } from '../data/mockBrics.js';
+import { apiClient } from './apiClient.js';
 
 export const bricsService = {
   async getCountries() {
@@ -31,16 +32,11 @@ export const bricsService = {
 
     // Persist to backend SQLite DB DataExchangeLog audit table
     try {
-      await fetch('http://localhost:5000/api/brics/exchange', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source_node: source.name,
-          target_node: target.name,
-          indicator: indicator,
-          payload: payload
-        }),
-        signal: AbortSignal.timeout(3000)
+      await apiClient.post('/api/brics/exchange', {
+        source_node: source.name,
+        target_node: target.name,
+        indicator: indicator,
+        payload: payload
       });
     } catch (e) {
       console.warn("Backend CADS exchange logging failed (offline fallback):", e);

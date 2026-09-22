@@ -1,82 +1,94 @@
 import { mockAdvisories } from '../data/mockAdvisories.js';
 import { farmService } from './farmService.js';
+import { apiClient } from './apiClient.js';
+import { USE_MOCK_FALLBACK } from '../config.js';
 
 const STORAGE_KEY = 'agribridge_advisories_state';
-const API_BASE = 'http://localhost:5000';
+
+export function fetchAdvisory(payload) {
+  return apiClient.post('/api/v1/advisories', payload);
+}
 
 export const advisoryService = {
+  /**
+   * Fetches full agronomic recommendations from Flask backend /api/v1/advisories
+   */
   async getAdvisories(filterCategory = 'all') {
     let list = [...mockAdvisories];
 
-    // Attempt live advisory fetch with farm coordinates and crop
     try {
       const farm = await farmService.getFarmProfile();
-      const lat = farm?.coordinates?.lat ?? 14.7384;
-      const lon = farm?.coordinates?.lng ?? 78.9928;
+      const lat = farm?.coordinates?.lat ?? 15.8281;
+      const lon = farm?.coordinates?.lng ?? 78.0373;
       const crop = farm?.crop || "Groundnut";
+      const variety = farm?.cropVariety || "Kadiri-6";
+      const stage = farm?.growthStage || "flowering";
 
-      const res = await fetch(`${API_BASE}/api/advisory`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          latitude: lat,
-          longitude: lon,
-          crop: crop,
-          crop_name: crop,
-          soil_type: farm?.soilType || "red_loamy",
-          location: farm?.location || "Kadapa, Andhra Pradesh"
-        }),
-        signal: AbortSignal.timeout(3500)
-      });
+      const payload = {
+        farm_id: "sathyala-farm-001",
+        latitude: lat,
+        longitude: lon,
+        location: farm?.location || "Kurnool, Andhra Pradesh, India",
+        crop: crop,
+        variety: variety,
+        crop_stage: stage,
+        sensor_device_id: "AGRI-ESP32-001"
+      };
 
-      if (res.ok) {
-        const liveAdv = await res.json();
-        const recs = liveAdv?.rule_based_recommendations?.recommendations || liveAdv?.recommendations;
-        if (Array.isArray(recs) && recs.length > 0) {
-          const liveItems = recs.map((rec, idx) => ({
-            id: `live-adv-${idx + 1}`,
-            crop: rec.crop,
-            category: "soil",
-            urgency: "medium",
-            title: `Regenerative Practice: ${rec.crop}`,
-            description: rec.rationale || (rec.soil_regeneration_practices ? rec.soil_regeneration_practices.join('. ') : ''),
-            actionText: "Review Practice",
-            completed: false,
-            source: "AgriN Advisory Engine (Live)"
-          }));
-          list = [...liveItems, ...list];
-        }
+      const liveAdv = await fetchAdvisory(payload);
+      const dataObj = liveAdv?.data || liveAdv;
+      const recs = dataObj?.recommendations || liveAdv?.recommendations;
+
+      if (Array.isArray(recs) && recs.length > 0) {
+        const liveItems = recs.map((rec, idx) => ({
+          id: `live-adv-${idx + 1}`,
+          crop: rec.crop || crop,
+          category: rec.category || "soil",
+          urgency: idx === 0 ? "high" : "medium",
+          title: `Regenerative Practice: ${rec.crop || crop}`,
+          titleEn: `Regenerative Practice: ${rec.crop || crop}`,
+          titleTe: `పునరుత్పాదక విధానం: ${rec.crop || crop}`,
+          titleHi: `पुनर्योजी कृषि पद्धति: ${rec.crop || crop}`,
+          description: rec.rationale || (rec.soil_regeneration_practices ? rec.soil_regeneration_practices.join('. ') : ''),
+          descEn: rec.rationale || (rec.soil_regeneration_practices ? rec.soil_regeneration_practices.join('. ') : ''),
+          descTe: rec.rationale || (rec.soil_regeneration_practices ? rec.soil_regeneration_practices.join('. ') : ''),
+          descHi: rec.rationale || (rec.soil_regeneration_practices ? rec.soil_regeneration_practices.join('. ') : ''),
+          actionText: rec.action || "Review Practice",
+          actionEn: rec.action || "Review Practice",
+          actionTe: "విధానాన్ని సమీక్షించండి",
+          actionHi: "सुझाव देखें",
+          confidence: Math.round(dataObj?.confidence_score ?? 92),
+          completed: false,
+          source: `AgriN Engine (${dataObj?.sensor_status === 'online' ? 'Live Sensor' : 'Model'})`
+        }));
+        list = [...liveItems, ...list];
       }
     } catch (e) {
-      // Graceful fallback to mock data
+      if (!USE_MOCK_FALLBACK) throw e;
     }
 
     // Sync completion states and records with backend SQLite DB
     try {
-      const histRes = await fetch(`${API_BASE}/api/advisory/history`, {
-        signal: AbortSignal.timeout(2500)
-      });
-      if (histRes.ok) {
-        const histData = await histRes.json();
-        if (Array.isArray(histData?.advisories)) {
-          const dbCompleted = histData.advisories
-            .filter(a => a.completed)
-            .map(a => `adv-${String(a.id).padStart(3, '0')}`);
-          
-          let storedCompleted = [];
-          try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) storedCompleted = JSON.parse(stored);
-          } catch {}
-          
-          const mergedCompleted = Array.from(new Set([...storedCompleted, ...dbCompleted]));
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedCompleted));
-          } catch {}
-        }
+      const histData = await apiClient.get('/api/v1/advisories/history');
+      const advisoriesList = histData?.advisories || histData?.data?.advisories;
+      if (Array.isArray(advisoriesList)) {
+        const dbCompleted = advisoriesList
+          .filter(a => a.completed)
+          .map(a => `adv-${String(a.id).padStart(3, '0')}`);
+
+        let storedCompleted = [];
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) storedCompleted = JSON.parse(stored);
+        } catch {}
+
+        const mergedCompleted = Array.from(new Set([...storedCompleted, ...dbCompleted]));
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedCompleted));
+        } catch {}
       }
     } catch (e) {
-      // Backend unavailable; offline fallback to localStorage
+      // Offline fallback to localStorage
     }
 
     try {
@@ -113,18 +125,14 @@ export const advisoryService = {
       completedIds.push(id);
     }
 
-    // 1. Persist immediately to localStorage
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(completedIds));
     } catch (e) {}
 
-    // 2. Persist completion state to backend SQLite DB
     try {
-      await fetch(`${API_BASE}/api/advisory/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, completed: isCompletedNow }),
-        signal: AbortSignal.timeout(3000)
+      await apiClient.post('/api/v1/advisories/complete', {
+        id,
+        completed: isCompletedNow
       });
     } catch (e) {
       console.warn("Backend advisory completion sync failed, state preserved locally:", e);
@@ -135,7 +143,6 @@ export const advisoryService = {
 
   /**
    * "Ask AgriAI" interactive assistant
-   * Generates safe, explainable agronomic guidance with safety disclaimers
    */
   async askAgriAI(userQuery, locale = 'en') {
     let farm = null;
@@ -143,41 +150,38 @@ export const advisoryService = {
       farm = await farmService.getFarmProfile();
     } catch (e) {}
 
-    const lat = farm?.coordinates?.lat ?? 14.7384;
-    const lon = farm?.coordinates?.lng ?? 78.9928;
+    const lat = farm?.coordinates?.lat ?? 15.8281;
+    const lon = farm?.coordinates?.lng ?? 78.0373;
     const crop = farm?.crop || "Groundnut";
-    const locName = farm?.location || "Kadapa, Andhra Pradesh";
+    const locName = farm?.location || "Kurnool, Andhra Pradesh";
 
-    // Attempt backend localization / LLM route
     try {
-      const res = await fetch(`${API_BASE}/localize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: userQuery,
-          crop_name: crop,
-          language: locale === 'te' ? 'te' : (locale === 'hi' ? 'hi' : 'en'),
-          latitude: lat,
-          longitude: lon
-        }),
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.localized_advisory) {
-          const adv = data.localized_advisory;
-          return {
-            answer: adv.actionable_guidance || adv.bulletin || adv.greeting || "Advisory guidance generated.",
-            sources: [`AgriN Localized Engine (${crop})`, `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`],
-            disclaimer: locale === 'hi' ? "निर्णय-सहायता सलाह। स्थानीय कृषि अधिकारी से पुष्टि करें।" : (locale === 'te' ? "సహాయక సిఫార్సు మాత్రమే." : "Decision support advisory only. Verify with local agricultural officers.")
-          };
+      const data = await apiClient.post('/api/v1/localizations', {
+        query: userQuery,
+        crop_name: crop,
+        language: locale === 'te' ? 'te' : (locale === 'hi' ? 'hi' : 'en'),
+        latitude: lat,
+        longitude: lon,
+        farmer_profile: {
+          farmer_name: farm?.farmerName || "Sathyala Farmer",
+          landholding_acres: farm?.areaAcres || 2.5,
+          location: locName
         }
+      });
+
+      const adv = data?.localized_advisory || data?.data?.localized_advisory;
+      if (adv) {
+        return {
+          answer: adv.actionable_guidance || adv.bulletin || adv.greeting || "Advisory guidance generated.",
+          sources: [`AgriN Localized Engine (${crop})`, `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`],
+          disclaimer: locale === 'hi' ? "निर्णय-सहायता सलाह। स्थानीय कृषि अधिकारी से पुष्टि करें।" : (locale === 'te' ? "సహాయక సిఫార్సు మాత్రమే." : "Decision support advisory only. Verify with local agricultural officers.")
+        };
       }
     } catch (e) {
-      // Fallback to local expert rules
+      // Fall through to local agronomic expert rules
     }
 
-    await new Promise(res => setTimeout(res, 500));
+    await new Promise(res => setTimeout(res, 300));
     const q = userQuery.toLowerCase();
 
     if (q.includes("irrigate") || q.includes("నీరు") || q.includes("water") || q.includes("pump") || q.includes("सिंचाई") || q.includes("पानी")) {
@@ -224,29 +228,6 @@ export const advisoryService = {
       };
     }
 
-    if (q.includes("regenerative") || q.includes("పునరుత్పాదక") || q.includes("mulch") || q.includes("మల్చింగ్") || q.includes("मल्च") || q.includes("प्राकृतिक") || q.includes("जैविक")) {
-      if (locale === 'te') {
-        return {
-          answer: `${crop} పొలంలో పంట వ్యర్థాలతో మల్చింగ్ (రక్షక పొర) వేయడం మరియు జీవామృతం ఉపయోగించడం ద్వారా నేలలో తేమ నిల్వ సామర్థ్యం 15-25% పెరుగుతుంది.`,
-          sources: ["సహజ వ్యవసాయ మార్గదర్శకాలు", "నేల ఉష్ణోగ్రత టెలిమెట్రీ"],
-          disclaimer: "స్థానిక వ్యవసాయ వాతావరణ మార్గదర్శకాల ప్రకారం పాటించండి."
-        };
-      }
-      if (locale === 'hi') {
-        return {
-          answer: `${crop} के खेत में फसल अवशेषों से मल्चिंग (मृदा आवरण) और जीवामृत का प्रयोग मिट्टी में 15-25% अधिक नमी बनाए रखता है और खरपतवार रोकता है।`,
-          sources: ["प्राकृतिक कृषि मानक", "वर्चुअल सेंसर टेलीमेट्री"],
-          disclaimer: "स्थानीय कृषि जलवायु दिशानिर्देशों के अनुसार पालन करें।"
-        };
-      }
-      return {
-        answer: `Biomass mulching and bio-fertilizer application for ${crop} protects root systems, suppresses weeds, and reduces irrigation requirements by 15-25%.`,
-        sources: ["Regenerative Agriculture Protocols", "Virtual Sensor Telemetry"],
-        disclaimer: "AgriBridge regenerative practice guidance."
-      };
-    }
-
-    // Default response
     if (locale === 'te') {
       return {
         answer: `మీ ప్రశ్న నమోదు చేయబడింది. ${locName} లోని మీ ${crop} పంట క్షేత్ర పరిస్థితులు స్థిరంగా ఉన్నాయి. మరింత సమాచారం కోసం సహాయకుడిని అడగండి.`,

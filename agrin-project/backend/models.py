@@ -144,3 +144,72 @@ class DataExchangeLog(db.Model):
             "payload_json": self.payload_json,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
+
+
+class SensorTelemetry(db.Model):
+    """IoT ESP32 Sensor probe readings and battery telemetry."""
+    __tablename__ = "sensor_telemetry"
+
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(80), nullable=False, default="AGRI-ESP32-001")
+    farm_id = db.Column(db.String(80), nullable=False, default="sathyala-farm-001")
+    soil_moisture_pct = db.Column(db.Float, nullable=False, default=34.0)
+    soil_depth_cm = db.Column(db.Float, nullable=False, default=15.0)
+    soil_temperature_c = db.Column(db.Float, nullable=False, default=29.4)
+    canopy_temperature_c = db.Column(db.Float, nullable=True, default=30.8)
+    ambient_temperature_c = db.Column(db.Float, nullable=False, default=32.1)
+    humidity_pct = db.Column(db.Float, nullable=False, default=68.0)
+    battery_pct = db.Column(db.Float, nullable=False, default=88.0)
+    signal_strength_dbm = db.Column(db.String(30), nullable=False, default="-65 dBm")
+    recorded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def get_status(self) -> str:
+        """
+        Calculates connection status based on data freshness:
+        - Online: <= 5 minutes (300 seconds)
+        - Stale: > 5 minutes and <= 30 minutes (1800 seconds)
+        - Offline: > 30 minutes
+        """
+        if not self.recorded_at:
+            return "offline"
+        rec_time = self.recorded_at
+        if rec_time.tzinfo is None:
+            rec_time = rec_time.replace(tzinfo=timezone.utc)
+        diff_sec = (datetime.now(timezone.utc) - rec_time).total_seconds()
+        if diff_sec <= 300:
+            return "online"
+        elif diff_sec <= 1800:
+            return "stale"
+        else:
+            return "offline"
+
+    def to_dict(self):
+        status = self.get_status()
+        rec_iso = self.recorded_at.isoformat() if self.recorded_at else datetime.now(timezone.utc).isoformat()
+        return {
+            "id": self.id,
+            "device_id": self.device_id,
+            "farm_id": self.farm_id,
+            "soil_moisture_pct": self.soil_moisture_pct,
+            "soil_depth_cm": self.soil_depth_cm,
+            "soil_temperature_c": self.soil_temperature_c,
+            "canopy_temperature_c": self.canopy_temperature_c,
+            "ambient_temperature_c": self.ambient_temperature_c,
+            "humidity_pct": self.humidity_pct,
+            "battery_pct": self.battery_pct,
+            "signal_strength_dbm": self.signal_strength_dbm,
+            "recorded_at": rec_iso,
+            "online": status == "online",
+            "status": status,
+            "last_seen": rec_iso,
+            # Frontend camelCase aliases for backward compatibility
+            "batteryPercent": self.battery_pct,
+            "soilMoisture": self.soil_moisture_pct,
+            "soilTemp": self.soil_temperature_c,
+            "ambientTemp": self.ambient_temperature_c,
+            "humidity": self.humidity_pct,
+            "signalStrength": self.signal_strength_dbm,
+            "lastSync": "Just now" if status == "online" else (f"{int((datetime.now(timezone.utc) - (self.recorded_at.replace(tzinfo=timezone.utc) if self.recorded_at.tzinfo is None else self.recorded_at)).total_seconds() // 60)} mins ago")
+        }
+

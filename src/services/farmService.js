@@ -1,39 +1,45 @@
 import { defaultFarmData } from '../data/mockFarm.js';
+import { apiClient } from './apiClient.js';
+import { USE_MOCK_FALLBACK } from '../config.js';
 
 const STORAGE_KEY = 'agribridge_farm_profile';
-const API_BASE = 'http://localhost:5000';
 
 export const farmService = {
   /**
-   * Returns current farm profile, checking backend first with localStorage fallback
+   * Returns current farm profile, checking backend first with localStorage / mock fallback
    */
   async getFarmProfile() {
     try {
-      const res = await fetch(`${API_BASE}/api/farm`, {
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json?.farm) {
-          const f = json.farm;
-          const merged = {
-            ...defaultFarmData,
-            ...f,
-            coordinates: (f.coordinates && f.coordinates.lat)
-              ? f.coordinates
-              : ((f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : defaultFarmData.coordinates),
-            boundaryPolygon: defaultFarmData.boundaryPolygon,
-            geoJson: defaultFarmData.geoJson,
-            location: f.location || defaultFarmData.location
-          };
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          } catch {}
-          return merged;
-        }
+      const data = await apiClient.get('/api/v1/farm');
+      const f = data?.farm || data?.data?.farm;
+      if (f) {
+        const merged = {
+          ...defaultFarmData,
+          ...f,
+          farmerName: f.farmerName || f.farmer_name || defaultFarmData.farmerName,
+          farmName: f.farmName || f.farm_name || defaultFarmData.farmName,
+          areaAcres: f.areaAcres || f.area_acres || defaultFarmData.areaAcres,
+          cropVariety: f.cropVariety || f.crop_variety || defaultFarmData.cropVariety,
+          sowingDate: f.sowingDate || f.sowing_date || defaultFarmData.sowingDate,
+          soilType: f.soilType || f.soil_type || defaultFarmData.soilType,
+          irrigationType: f.irrigationType || f.irrigation_type || defaultFarmData.irrigationType,
+          coordinates: (f.coordinates && f.coordinates.lat)
+            ? f.coordinates
+            : ((f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : defaultFarmData.coordinates),
+          boundaryPolygon: defaultFarmData.boundaryPolygon,
+          geoJson: defaultFarmData.geoJson,
+          location: f.location || defaultFarmData.location
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        } catch {}
+        return merged;
       }
     } catch (e) {
-      // Backend unavailable or network timeout; fall through to localStorage
+      if (!USE_MOCK_FALLBACK) {
+        throw e;
+      }
+      // Fall through to localStorage or default demo data
     }
 
     try {
@@ -73,30 +79,22 @@ export const farmService = {
       console.error("Failed to write farm profile to localStorage:", e);
     }
 
-    // 2. Persist to backend SQLite DB
+    // 2. Persist to backend SQLite DB via apiClient
     try {
-      const res = await fetch(`${API_BASE}/api/farm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json?.farm) {
-          const f = json.farm;
-          const merged = {
-            ...updated,
-            ...f,
-            coordinates: (f.coordinates && f.coordinates.lat)
-              ? f.coordinates
-              : ((f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : updated.coordinates)
-          };
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          } catch {}
-          return merged;
-        }
+      const data = await apiClient.post('/api/v1/farm', updated);
+      const f = data?.farm || data?.data?.farm;
+      if (f) {
+        const merged = {
+          ...updated,
+          ...f,
+          coordinates: (f.coordinates && f.coordinates.lat)
+            ? f.coordinates
+            : ((f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : updated.coordinates)
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        } catch {}
+        return merged;
       }
     } catch (e) {
       console.warn("Backend farm update failed, persisted in localStorage:", e);

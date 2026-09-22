@@ -1,10 +1,11 @@
 import { t, getLocale, setLocale } from '../i18n/index.js';
 import { showToast } from './Toast.js';
+import { renderSystemStatusPill } from './SystemStatus.js';
 
-export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
+export function renderHeader(container, { farm, onMenuToggle, onNavigate, onReload }) {
   const currentLocale = getLocale();
   const cropLabel = farm.crop ? `${farm.crop}${farm.cropVariety ? ` (${farm.cropVariety})` : ''}` : 'Groundnut (K6)';
-  const locLabel = farm.location || 'Kadapa, Andhra Pradesh';
+  const locLabel = farm.location || 'Kurnool, Andhra Pradesh';
 
   container.innerHTML = `
     <header class="app-header">
@@ -26,6 +27,9 @@ export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
           <span>🌱</span>
           <span>${cropLabel}</span>
         </div>
+
+        <!-- System Connectivity Status Pill -->
+        <div id="header-system-status"></div>
       </div>
 
       <div class="header-right">
@@ -102,5 +106,10 @@ export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
       }
       showToast(msg, "warning", 5000);
     });
+  }
+
+  const statusEl = container.querySelector('#header-system-status');
+  if (statusEl) {
+    renderSystemStatusPill(statusEl, { onRetry: onReload });
   }
 }

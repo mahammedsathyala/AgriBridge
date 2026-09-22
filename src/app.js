@@ -1,6 +1,7 @@
 import { getLocale, onLocaleChange } from './i18n/index.js';
 import { farmService } from './services/farmService.js';
 import { weatherService } from './services/weatherService.js';
+import { healthService } from './services/healthService.js';
 import { renderHeader } from './components/Header.js';
 import { renderSidebar } from './components/Sidebar.js';
 import { renderMobileNav } from './components/MobileNav.js';
@@ -31,36 +32,69 @@ class App {
   }
 
   async init() {
-    // Check low-bandwidth mode
-    if (localStorage.getItem('agribridge_low_bw') === 'true') {
-      document.body.classList.add('low-bandwidth-mode');
-    }
+    try {
+      // Check low-bandwidth mode
+      if (localStorage.getItem('agribridge_low_bw') === 'true') {
+        document.body.classList.add('low-bandwidth-mode');
+      }
 
-    // Set initial locale class if Telugu or Hindi
-    if (getLocale() === 'te') {
-      document.body.classList.add('lang-te');
-    } else if (getLocale() === 'hi') {
-      document.body.classList.add('lang-hi');
-    }
+      // Set initial locale class if Telugu or Hindi
+      if (getLocale() === 'te') {
+        document.body.classList.add('lang-te');
+      } else if (getLocale() === 'hi') {
+        document.body.classList.add('lang-hi');
+      }
 
-    // Load initial data
-    this.farm = await farmService.getFarmProfile();
-    this.weather.forecast = await weatherService.get5DayForecast();
-    this.weather.history14Days = await weatherService.get14DayTelemetry();
+      // Check backend connectivity (non-blocking)
+      try {
+        await healthService.checkBackendHealth();
+      } catch (e) {
+        console.warn('Initial health check notice:', e);
+      }
 
-    // Listen to locale changes
-    onLocaleChange(() => {
-      this.render();
-    });
+      // Load initial data with safe fallbacks
+      try {
+        this.farm = await farmService.getFarmProfile();
+      } catch (e) {
+        console.error('Failed to load farm profile:', e);
+      }
 
-    // Handle mobile backdrop click
-    if (this.backdropEl) {
-      this.backdropEl.addEventListener('click', () => {
-        this.closeSidebar();
+      try {
+        this.weather.forecast = await weatherService.get5DayForecast();
+        this.weather.history14Days = await weatherService.get14DayTelemetry();
+      } catch (e) {
+        console.error('Failed to load weather data:', e);
+      }
+
+      // Listen to locale changes
+      onLocaleChange(() => {
+        this.render();
       });
-    }
 
-    this.render();
+      // Handle mobile backdrop click
+      if (this.backdropEl) {
+        this.backdropEl.addEventListener('click', () => {
+          this.closeSidebar();
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected error in App.init:', err);
+    } finally {
+      // Always guarantee rendering occurs
+      this.render();
+    }
+  }
+
+  async reloadData() {
+    try {
+      this.farm = await farmService.getFarmProfile();
+      this.weather.forecast = await weatherService.get5DayForecast();
+      this.weather.history14Days = await weatherService.get14DayTelemetry();
+    } catch (err) {
+      console.error('Failed to reload data:', err);
+    } finally {
+      this.render();
+    }
   }
 
   setTab(tab) {
@@ -91,7 +125,8 @@ class App {
     renderHeader(this.headerEl, {
       farm: this.farm,
       onMenuToggle: () => this.toggleSidebar(),
-      onNavigate: (tab) => this.setTab(tab)
+      onNavigate: (tab) => this.setTab(tab),
+      onReload: () => this.reloadData()
     });
 
     // 2. Render Sidebar
@@ -161,8 +196,18 @@ class App {
   }
 }
 
-// Bootstrap application on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
+// Bootstrap application on DOM ready or immediate if ready
+function startApp() {
   const app = new App();
-  app.init();
-});
+  app.init().catch((err) => {
+    console.error('Critical app start error:', err);
+    app.render();
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  // DOM is already ready (module executed after DOM parse)
+  startApp();
+}

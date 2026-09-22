@@ -1,17 +1,29 @@
 """
-AgriN Advisory Route (MVP 2: Live Data Ingestion)
-------------------------------------------------
-Accepts either:
-  1. Live GPS coordinates ({"latitude": 17.3850, "longitude": 78.4867})
-     -> Automatically pulls live Open-Meteo, SoilGrids, and Satellite NDVI data.
-  2. Manual inputs (soil_type, weather, season)
-     -> Legacy manual mode / overrides from MVP 1.
+AgriN Advisory Route (v1 Standardized API with ESP32 & Satellite Ingestion)
+----------------------------------------------------------------------------
+Accepts:
+  - Farm ID / GPS coordinates
+  - Crop & crop stage (e.g., "flowering")
+  - Sensor device ID (e.g., "AGRI-ESP32-001")
+  - Manual overrides
+
+Combines:
+  1. Real-time ESP32 sensor telemetry (soil moisture, temperature)
+  2. Open-Meteo meteorological feed (rainfall, VPD, humidity)
+  3. ISRIC SoilGrids 250m profile
+  4. Sentinel-2 / Landsat-9 Satellite NDVI vigor
+  5. ICAR agronomic rule engine & optional Anthropic Claude LLM localization
+
+Standardized REST endpoints:
+  POST /api/v1/advisories
+  GET  /api/v1/advisories/history
+  POST /api/v1/advisories/complete
 """
 
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any, List
 from flask import Blueprint, request, jsonify
-from models import db, FarmProfile, AdvisoryRecord
+from models import db, FarmProfile, AdvisoryRecord, SensorTelemetry
 
 from engines.advisory_engine import get_rule_based_advisory
 from engines.llm_advisory import llm_localizer
@@ -22,10 +34,20 @@ from data_sources.satellite import fetch_satellite_ndvi
 advisory_bp = Blueprint("advisory", __name__)
 
 
+def format_v1_error(code: str, message: str, status_code: int = 400, details: Optional[dict] = None):
+    """Helper for standardized v1 API error schema."""
+    return jsonify({
+        "status": "error",
+        "code": code,
+        "error_code": code,
+        "message": message,
+        "request_id": f"req-adv-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')[:17]}",
+        "details": details or {}
+    }), status_code
+
+
 def infer_agricultural_season(lat: float, month: Optional[int] = None) -> str:
-    """
-    Infers the current agro-climatic season based on calendar month and hemisphere.
-    """
+    """Infers current agro-climatic season based on month & hemisphere."""
     if month is None:
         month = datetime.now(timezone.utc).month
 
@@ -47,14 +69,23 @@ def infer_agricultural_season(lat: float, month: Optional[int] = None) -> str:
 
 @advisory_bp.route("/advisory", methods=["GET"])
 @advisory_bp.route("/api/advisory", methods=["GET"])
+@advisory_bp.route("/api/v1/advisories", methods=["GET"])
 def advisory_info():
     """Returns endpoint documentation and sample payload structures."""
     return jsonify({
         "service": "AgriN Advisory API",
-        "stage": "MVP 2: Live Data Ingestion (Open-Meteo, SoilGrids, Satellite NDVI)",
+        "version": "1.0.0",
         "method": "POST",
-        "endpoints": ["/advisory", "/api/advisory"],
+        "endpoints": ["/api/v1/advisories", "/advisory", "/api/advisory"],
         "expected_payload": {
+            "farm_id": "sathyala-farm-001",
+            "latitude": 15.8281,
+            "longitude": 78.0373,
+            "location": "Kurnool, Andhra Pradesh, India",
+            "crop": "Groundnut",
+            "variety": "Kadiri-6",
+            "crop_stage": "flowering",
+            "sensor_device_id": "AGRI-ESP32-001",
             "mode_1_live_coordinates": {
                 "latitude": "Float (-90 to 90)",
                 "longitude": "Float (-180 to 180)",
@@ -66,49 +97,33 @@ def advisory_info():
                 "season": "kharif | rabi | zaid",
                 "location": "Optional region name"
             }
-        },
-        "modes": {
-            "mode_1_live_coordinates": {
-                "description": "Provide GPS coordinates to automatically ingest live weather, soil, and satellite NDVI data.",
-                "sample_payload": {
-                    "latitude": 17.3850,
-                    "longitude": 78.4867,
-                    "location": "Telangana Agricultural Zone"
-                }
-            },
-            "mode_2_manual_override": {
-                "description": "Provide manual parameters (or overrides alongside coordinates).",
-                "sample_payload": {
-                    "soil_type": "sandy",
-                    "weather": "dry",
-                    "season": "kharif",
-                    "location": "Semi-Arid Drylands"
-                }
-            }
         }
     }), 200
 
 
+@advisory_bp.route("/api/v1/advisories", methods=["POST"])
 @advisory_bp.route("/advisory", methods=["POST"])
 @advisory_bp.route("/api/advisory", methods=["POST"])
 def get_advisory():
     """
-    Generates tailored agro-advisories from either live sensor/geo data or manual inputs.
+    Generates tailored agro-advisories combining ESP32 telemetry, weather forecast,
+    soil profile, satellite NDVI, and crop stage.
     """
     if not request.is_json:
-        return jsonify({
-            "status": "error",
-            "error_code": "INVALID_CONTENT_TYPE",
-            "message": "Request body must be valid JSON with 'Content-Type: application/json'."
-        }), 400
+        return format_v1_error(
+            "INVALID_CONTENT_TYPE",
+            "Request body must be valid JSON with 'Content-Type: application/json'."
+        )
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({
-            "status": "error",
-            "error_code": "EMPTY_PAYLOAD",
-            "message": "JSON body cannot be empty."
-        }), 400
+        return format_v1_error("EMPTY_PAYLOAD", "JSON body cannot be empty.")
+
+    farm_id = data.get("farm_id") or "sathyala-farm-001"
+    crop_name = data.get("crop") or data.get("crop_name") or "Groundnut"
+    crop_variety = data.get("variety") or data.get("crop_variety") or "Kadiri-6"
+    crop_stage = data.get("crop_stage") or data.get("growthStage") or "flowering"
+    sensor_device_id = data.get("sensor_device_id") or data.get("device_id") or "AGRI-ESP32-001"
 
     # Extract coordinates if provided
     raw_lat = data.get("latitude") if data.get("latitude") is not None else data.get("lat")
@@ -125,11 +140,10 @@ def get_advisory():
                 raise ValueError("Coordinates out of physical bounds")
             coordinates = (lat, lon)
         except (ValueError, TypeError):
-            return jsonify({
-                "status": "error",
-                "error_code": "INVALID_COORDINATES",
-                "message": "Coordinates must be valid numbers: latitude (-90 to 90), longitude (-180 to 180)."
-            }), 400
+            return format_v1_error(
+                "INVALID_COORDINATES",
+                "Coordinates must be valid numbers: latitude (-90 to 90), longitude (-180 to 180)."
+            )
 
     # Manual fields
     soil_type = data.get("soil_type")
@@ -137,30 +151,63 @@ def get_advisory():
     season = data.get("season")
     location = data.get("location")
 
-    live_telemetry = None
+    live_telemetry: Dict[str, Any] = {}
     data_source_mode = "manual"
+    warnings: List[str] = []
+    data_sources: List[str] = []
 
-    # If coordinates are available, fetch live telemetry streams
+    # 1. Ingest ESP32 sensor telemetry
+    sensor_record = None
+    if sensor_device_id:
+        sensor_record = SensorTelemetry.query.filter(SensorTelemetry.device_id == sensor_device_id).order_by(SensorTelemetry.recorded_at.desc()).first()
+    if not sensor_record:
+        sensor_record = SensorTelemetry.query.filter(SensorTelemetry.farm_id == farm_id).order_by(SensorTelemetry.recorded_at.desc()).first()
+    if not sensor_record:
+        sensor_record = SensorTelemetry.query.order_by(SensorTelemetry.recorded_at.desc()).first()
+
+    sensor_status = "offline"
+    sensor_data_dict = {}
+    confidence_score = 92.0
+
+    if sensor_record:
+        sensor_data_dict = sensor_record.to_dict()
+        sensor_status = sensor_data_dict.get("status", "offline")
+        live_telemetry["sensor_node"] = sensor_data_dict
+        data_sources.append(f"ESP32 Sensor Probe ({sensor_record.device_id})")
+
+        if sensor_status == "offline":
+            warnings.append("ESP32 sensor node is offline (> 30 mins). Moisture confidence reduced.")
+            confidence_score = 75.0
+        elif sensor_status == "stale":
+            warnings.append("ESP32 sensor telemetry is stale (> 5 mins). Verify soil moisture manually.")
+            confidence_score = 82.0
+    else:
+        warnings.append("No active ESP32 sensor node linked to farm parcel. Defaulting to agro-climatic model.")
+        confidence_score = 70.0
+
+    # 2. Fetch live telemetry streams if coordinates are available
     if coordinates:
         lat, lon = coordinates
         data_source_mode = "live_data_ingestion"
 
-        # 1. Open-Meteo live weather
+        # Open-Meteo live weather
         weather_data = fetch_weather_forecast(lat, lon)
-        # 2. ISRIC SoilGrids live physical & chemical profile
+        live_telemetry["weather"] = weather_data
+        data_sources.append("Open-Meteo Live Forecast")
+
+        # ISRIC SoilGrids live profile
         soil_data = fetch_soilgrids_profile(lat, lon)
-        # 3. Satellite NDVI & canopy vigor
+        live_telemetry["soil"] = soil_data
+        data_sources.append("ISRIC SoilGrids 250m")
+
+        # Sentinel-2 Satellite NDVI
         satellite_data = fetch_satellite_ndvi(lat, lon)
+        live_telemetry["satellite_ndvi"] = satellite_data
+        data_sources.append("Sentinel-2 Multispectral NDVI")
 
-        live_telemetry = {
-            "weather": weather_data,
-            "soil": soil_data,
-            "satellite_ndvi": satellite_data
-        }
-
-        # Derive parameters if not explicitly overridden by user
+        # Derive parameters if not explicitly provided
         if not soil_type:
-            soil_type = soil_data.get("physical_properties", {}).get("agrin_soil_type", "loam")
+            soil_type = soil_data.get("physical_properties", {}).get("agrin_soil_type", "red_loam")
         if not weather:
             weather = weather_data.get("derived_agro_weather", "moderate")
         if not season:
@@ -168,7 +215,7 @@ def get_advisory():
         if not location:
             location = f"Coordinates ({lat:.4f}, {lon:.4f})"
 
-    # Validate that we have the 3 necessary attributes (either from manual or live extraction)
+    # Validate required attributes
     missing = []
     if not soil_type or not str(soil_type).strip():
         missing.append("soil_type (or coordinates)")
@@ -178,28 +225,35 @@ def get_advisory():
         missing.append("season (or coordinates)")
 
     if missing:
-        return jsonify({
-            "status": "error",
-            "error_code": "MISSING_REQUIRED_FIELDS",
-            "message": f"Could not determine required attributes: {', '.join(missing)}.",
-            "suggestion": "Provide either GPS coordinates ('latitude', 'longitude') for live data ingestion OR manual inputs ('soil_type', 'weather', 'season')."
-        }), 400
+        return format_v1_error(
+            "MISSING_REQUIRED_FIELDS",
+            f"Could not determine required attributes: {', '.join(missing)}.",
+            details={"suggestion": "Provide either GPS coordinates ('latitude', 'longitude') OR manual inputs ('soil_type', 'weather', 'season')."}
+        )
 
     # Run advisory engine with enriched parameters
     try:
-        advisory_result = get_rule_based_advisory(
-            soil_type=str(soil_type),
-            weather=str(weather),
-            season=str(season),
-            location=str(location or "Unspecified"),
-            **{k: v for k, v in data.items() if k not in ["soil_type", "weather", "season", "location", "lat", "lon", "latitude", "longitude"]}
-        )
+        engine_params = {
+            "soil_type": str(soil_type),
+            "weather": str(weather),
+            "season": str(season),
+            "location": str(location or "Unspecified"),
+            "crop": crop_name,
+            "crop_name": crop_name,
+            "crop_stage": crop_stage,
+            "crop_variety": crop_variety
+        }
+        # Pass extra custom fields
+        for k, v in data.items():
+            if k not in engine_params and k not in ["lat", "lon", "latitude", "longitude"]:
+                engine_params[k] = v
 
-        # Optional MVP 4 Localization
+        advisory_result = get_rule_based_advisory(**engine_params)
+
+        # Optional Localization
         localized_guidance = None
         if data.get("localize") or data.get("localise"):
             lang = data.get("language") or data.get("lang") or "en"
-            # Combine telemetry into advisory_result for rich context
             enriched_context = {**advisory_result, "live_telemetry": live_telemetry}
             localized_guidance = llm_localizer.generate_plain_advisory(
                 advisory_data=enriched_context,
@@ -207,27 +261,17 @@ def get_advisory():
                 farmer_profile=data.get("farmer_profile")
             )
 
-        response_payload = {
-            "status": "success",
-            "version": "4.0.0-mvp4",
-            "mode": data_source_mode,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "live_telemetry": live_telemetry,
-            "localized_farmer_guidance": localized_guidance,
-            **advisory_result
-        }
-
-        # Persist generated advisories to database (Task 4)
+        # Persist generated advisories to database
         try:
             active_farm = FarmProfile.query.order_by(FarmProfile.id.desc()).first()
-            farm_id = active_farm.id if active_farm else None
+            farm_db_id = active_farm.id if active_farm else None
             source_type = "llm" if localized_guidance else "rule_based"
 
             recs = advisory_result.get("recommendations", [])
             for r in recs:
-                txt = r.get("action") or r.get("rationale") or f"Recommended crop: {r.get('crop', '')}"
+                txt = r.get("action") or r.get("rationale") or f"Recommended practice: {r.get('crop', '')}"
                 rec_row = AdvisoryRecord(
-                    farm_id=farm_id,
+                    farm_id=farm_db_id,
                     recommendation_text=txt,
                     source=source_type,
                     completed=False
@@ -237,16 +281,63 @@ def get_advisory():
         except Exception as db_err:
             print(f"Warning: Failed to persist AdvisoryRecords: {db_err}")
 
-        return jsonify(response_payload), 200
+        # In manual mode without live coordinates, live_telemetry is None for backwards compatibility
+        effective_telemetry = live_telemetry if coordinates else None
+
+        # Build standardized response
+        response_data = {
+            "farm_id": farm_id,
+            "crop": crop_name,
+            "variety": crop_variety,
+            "crop_stage": crop_stage,
+            "location": location,
+            "mode": data_source_mode,
+            "sensor_status": sensor_status,
+            "sensor_data": sensor_data_dict,
+            "confidence_score": confidence_score,
+            "recommendations": advisory_result.get("recommendations", []),
+            "priority_action": advisory_result.get("recommendations", [{}])[0] if advisory_result.get("recommendations") else None,
+            "live_telemetry": effective_telemetry,
+            "localized_farmer_guidance": localized_guidance,
+            **advisory_result
+        }
+
+        standardized_envelope = {
+            "status": "success",
+            "schema_version": "1.0.0",
+            "request_id": f"req-adv-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')[:17]}",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "data_sources": data_sources,
+            "warnings": warnings,
+            "data_quality": {
+                "sensor_status": sensor_status,
+                "confidence_percent": confidence_score,
+                "data_freshness": "live" if sensor_status == "online" else sensor_status
+            },
+            "data": response_data,
+            # Top-level fields for backwards compatibility with tests and old clients
+            "version": "1.0.0",
+            "mode": data_source_mode,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "live_telemetry": effective_telemetry,
+            "localized_farmer_guidance": localized_guidance,
+            "recommendations": advisory_result.get("recommendations", []),
+            "recommendation_count": len(advisory_result.get("recommendations", [])),
+            "rule_based_recommendations": advisory_result.get("rule_based_recommendations", advisory_result),
+            **advisory_result
+        }
+
+        return jsonify(standardized_envelope), 200
 
     except Exception as exc:
-        return jsonify({
-            "status": "error",
-            "error_code": "ENGINE_ERROR",
-            "message": f"An unexpected error occurred in the advisory engine: {str(exc)}"
-        }), 500
+        return format_v1_error(
+            "ENGINE_ERROR",
+            f"An unexpected error occurred in the advisory engine: {str(exc)}",
+            status_code=500
+        )
 
 
+@advisory_bp.route("/api/v1/advisories/history", methods=["GET"])
 @advisory_bp.route("/api/advisory/history", methods=["GET"])
 @advisory_bp.route("/advisory/history", methods=["GET"])
 def get_advisory_history():
@@ -288,23 +379,31 @@ def get_advisory_history():
         except Exception as seed_err:
             print(f"Warning seeding advisory records: {seed_err}")
 
+    history_list = [r.to_dict() for r in records]
     return jsonify({
         "status": "success",
+        "schema_version": "1.0.0",
+        "request_id": f"req-hist-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')[:17]}",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_sources": ["SQLite AdvisoryRecord Database"],
+        "warnings": [],
         "count": len(records),
-        "advisories": [r.to_dict() for r in records]
+        "advisories": history_list,
+        "data": {
+            "count": len(records),
+            "advisories": history_list
+        }
     }), 200
 
 
+@advisory_bp.route("/api/v1/advisories/<int:advisory_id>/complete", methods=["POST", "PATCH"])
 @advisory_bp.route("/api/advisory/<int:advisory_id>/complete", methods=["POST", "PATCH"])
 @advisory_bp.route("/advisory/<int:advisory_id>/complete", methods=["POST", "PATCH"])
 def mark_advisory_completed_by_id(advisory_id: int):
     """Mark an advisory record as completed (or toggle)."""
     record = AdvisoryRecord.query.get(advisory_id)
     if not record:
-        return jsonify({
-            "status": "error",
-            "message": f"Advisory with ID {advisory_id} not found."
-        }), 404
+        return format_v1_error("NOT_FOUND", f"Advisory with ID {advisory_id} not found.", status_code=404)
 
     data = request.get_json(silent=True) or {}
     if "completed" in data:
@@ -316,10 +415,12 @@ def mark_advisory_completed_by_id(advisory_id: int):
     return jsonify({
         "status": "success",
         "message": "Advisory status updated",
-        "advisory": record.to_dict()
+        "advisory": record.to_dict(),
+        "data": {"advisory": record.to_dict()}
     }), 200
 
 
+@advisory_bp.route("/api/v1/advisories/complete", methods=["POST", "PATCH"])
 @advisory_bp.route("/api/advisory/complete", methods=["POST", "PATCH"])
 @advisory_bp.route("/advisory/complete", methods=["POST", "PATCH"])
 def mark_advisory_completed():
@@ -327,12 +428,8 @@ def mark_advisory_completed():
     data = request.get_json(silent=True) or {}
     adv_id = data.get("id") or data.get("advisory_id")
     if not adv_id:
-        return jsonify({
-            "status": "error",
-            "message": "Missing 'id' or 'advisory_id' in request payload."
-        }), 400
+        return format_v1_error("INVALID_INPUT", "Missing 'id' or 'advisory_id' in request payload.")
 
-    # If ID is string like 'adv-001' or number
     try:
         if isinstance(adv_id, str) and "-" in adv_id:
             num_part = adv_id.split("-")[-1]
@@ -344,7 +441,6 @@ def mark_advisory_completed():
 
     record = AdvisoryRecord.query.get(numeric_id)
     if not record:
-        # Fallback to first record or create
         record = AdvisoryRecord.query.first()
         if not record:
             active_farm = FarmProfile.query.order_by(FarmProfile.id.desc()).first()
@@ -365,5 +461,6 @@ def mark_advisory_completed():
     return jsonify({
         "status": "success",
         "message": "Advisory status updated",
-        "advisory": record.to_dict()
+        "advisory": record.to_dict(),
+        "data": {"advisory": record.to_dict()}
     }), 200
