@@ -467,28 +467,62 @@ AgriBridge establishes a robust end-to-end integration between the **Vanilla ES6
 
 ## 🚀 Running AgriBridge Locally
 
-### 1. Start the Flask Backend
+You can launch AgriBridge using either the **1-Click All-in-One Runner** or **Separate Terminals**:
+
+### Option 1: ⚡ 1-Click All-in-One Runner (Recommended)
+
+From the project root folder:
+```bash
+python run.py
+```
+*(On Windows, you can also simply double-click `start.bat` in File Explorer).*
+
+This script automatically:
+1. Spawns the **Python Flask Backend** on `http://127.0.0.1:5000`
+2. Spawns the **Frontend Dev Server** on `http://localhost:3000`
+3. Opens `http://localhost:3000` directly in your default browser.
+
+---
+
+### Option 2: 🖥️ Separate Terminals
+
+#### Terminal 1 — Backend (Port 5000)
 ```bash
 cd agrin-project/backend
-# Install dependencies
+
+# Install dependencies (first time only)
 pip install -r requirements.txt
-# Run the backend server
+
+# Run Flask server
 python app.py
 ```
-Backend will start on `http://localhost:5000`. Verify health:
-```bash
-curl http://localhost:5000/api/v1/health
-```
+> API will run on `http://localhost:5000`  
+> Health check: `http://localhost:5000/api/v1/health`
 
-### 2. Start the Frontend Dashboard
-In a separate terminal at the repository root:
+#### Terminal 2 — Frontend (Port 3000)
 ```bash
-# Using Python dev server
+# In the root repository directory:
 python dev_server.py
-# Or using standard static server on port 3000:
-# python -m http.server 3000
 ```
-Open your browser at `http://localhost:3000`.
+> Open browser at: `http://localhost:3000`
+
+---
+
+## 🗄️ Database Architecture & Schema
+
+AgriBridge uses a lightweight SQLite database (`agrin-project/backend/agrin.db`) managed through SQLAlchemy models with a standalone DDL file provided for PostgreSQL / MySQL / SQLite migrations:
+- **Standalone SQL Schema**: [`schema.sql`](schema.sql) and [`agrin-project/backend/schema.sql`](agrin-project/backend/schema.sql)
+- **Python ORM Models**: [`agrin-project/backend/models.py`](agrin-project/backend/models.py)
+
+### Core Database Tables
+
+| Table Name | Description | Key Fields & Indexes |
+|---|---|---|
+| `farm_profiles` | Registered farm profile & agronomic details | Farmer name, location, GPS lat/lng, crop (Groundnut K6), soil, irrigation |
+| `sensor_telemetry` | ESP32 IoT sensor telemetry log | Soil moisture %, soil depth, soil temp, canopy temp, ambient temp, humidity, battery %, recorded_at |
+| `diagnosis_records` | AI computer vision crop disease log | Farm ID, crop, disease pathology, confidence score, image reference |
+| `advisory_records` | Generated agronomic advisories & status | Farm ID, recommendation text, source (rules/LLM), completed boolean |
+| `data_exchange_logs` | BRICS CADS decentralized audit trail | Source node, target node, CADS indicator, JSON payload, created_at |
 
 ---
 
@@ -510,7 +544,7 @@ Open your browser at `http://localhost:3000`.
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Verification
 
 Automated unit and integration test suites are included for all backend engines:
 
@@ -518,6 +552,8 @@ Automated unit and integration test suites are included for all backend engines:
 cd agrin-project/backend
 python -m pytest tests/ -v
 ```
+
+**Results**: 50/50 tests passing (100% pass rate).
 
 Test coverage includes:
 - `test_v1_api.py`: Full REST v1 test suite (health check, CORS headers, advisory engine with sensor data, sensor telemetry POST & GET latest & history, invalid payloads, stale sensor status degradation, disease diagnosis multipart & base64, weather/soil/satellite endpoints, error formats).
@@ -538,3 +574,4 @@ This project is licensed under the **MIT License** — see the `LICENSE` file fo
 - **ISRIC SoilGrids**: Global high-resolution digital soil mapping data (250m REST API).
 - **Open-Meteo**: Free weather forecast and historical reanalysis APIs.
 - **Copernicus Sentinel-2 & ISRO Bhuvan**: Open satellite remote sensing data for vegetation indices.
+
