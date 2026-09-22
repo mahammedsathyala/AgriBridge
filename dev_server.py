@@ -30,6 +30,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
     
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", port), CustomHTTPRequestHandler) as httpd:
         print(f"AgriBridge dev server running at http://localhost:{port}/")
         try:

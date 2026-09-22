@@ -10,24 +10,60 @@ import os
 import sys
 import subprocess
 import time
+import socket
 import webbrowser
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 BACKEND_DIR = os.path.join(ROOT_DIR, "agrin-project", "backend")
+
+# Find virtualenv python for backend
+VENV_PYTHON = os.path.join(BACKEND_DIR, "venv", "Scripts", "python.exe")
+if not os.path.exists(VENV_PYTHON):
+    VENV_PYTHON = os.path.join(BACKEND_DIR, "venv", "bin", "python")
+if not os.path.exists(VENV_PYTHON):
+    VENV_PYTHON = sys.executable
+
+
+def kill_port_process_windows(port: int):
+    """Frees up a port if already occupied on Windows."""
+    if os.name != "nt":
+        return
+    try:
+        cmd = f'powershell -Command "Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }}"'
+        subprocess.run(cmd, shell=True, capture_output=True, timeout=5)
+    except Exception:
+        pass
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
 
 def main():
     print("=" * 60)
     print("🌱 AgriBridge — Starting Local Services")
     print("=" * 60)
     
-    # 1. Start Backend
-    print("[1/2] Launching Flask Backend (Port 5000)...")
+    # Ensure ports are free
+    if is_port_in_use(5000):
+        print("Cleaning up existing process on port 5000...")
+        kill_port_process_windows(5000)
+        time.sleep(0.5)
+
+    if is_port_in_use(3000):
+        print("Cleaning up existing process on port 3000...")
+        kill_port_process_windows(3000)
+        time.sleep(0.5)
+
+    # 1. Start Backend with virtualenv Python
+    print(f"[1/2] Launching Flask Backend (Port 5000)...")
     backend_proc = subprocess.Popen(
-        [sys.executable, "app.py"],
+        [VENV_PYTHON, "app.py"],
         cwd=BACKEND_DIR
     )
     
-    # Give backend a moment to bind port
+    # Give backend a moment to start
     time.sleep(1.5)
     
     # 2. Start Frontend Dev Server
@@ -56,9 +92,16 @@ def main():
     except KeyboardInterrupt:
         print("\nStopping AgriBridge servers...")
     finally:
-        backend_proc.terminate()
-        frontend_proc.terminate()
+        try:
+            backend_proc.terminate()
+        except Exception:
+            pass
+        try:
+            frontend_proc.terminate()
+        except Exception:
+            pass
         print("Done. Goodbye!")
+
 
 if __name__ == "__main__":
     main()
