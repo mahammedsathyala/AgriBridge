@@ -43,18 +43,18 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │                             EDGE / FARMER TIER (Web SPA)                         │
 │  - Vanilla ES6+ Browser Native (Zero Build Step)    - Responsive Layout & PWA    │
-│  - Trilingual i18n (English, Telugu తెలుగు, Hindi हिंदी)  - Low-Bandwidth Mode (2G/3G) │
+│  - Trilingual i18n (English, Telugu తెలుగు, Hindi हिंदी)  - Low-Bandwidth Mode(2G) │
 │  - "Ask Me" Multi-Crop AI Section (Voice & Audio)  - Interactive SVG Chart Box   │
-│  - Deep Learning Model Badge & Confidence Warnings - Dynamic Regenerative Gauge │
+│  - Deep Learning Model Badge & Confidence Warnings - Dynamic Regenerative Gauge  │
 └────────────────────────────────────────┬─────────────────────────────────────────┘
                                          │ REST / JSON (or Mock Fallback)
 ┌────────────────────────────────────────▼─────────────────────────────────────────┐
-│                           AGRIN INTELLIGENCE BACKEND                              │
+│                           AGRIN INTELLIGENCE BACKEND                             │
 │                               (Python / Flask API)                               │
 ├───────────────────────┬──────────────────────────┬───────────────────────────────┤
 │    ADVISORY ENGINE    │  DEEP LEARNING CV ENGINE │     VERNACULAR LLM ENGINE     │
 │  - Static Rules & CADS│  - MobileNetV2 (5 Class) │  - Anthropic Claude 3.5       │
-│  - Dynamic Agro Logic │  - Safety Threshold (<60%)│ - Structured ML Context Pass  │
+│  - Dynamic Agro Logic │  - Safety Threshold (<60%)│ - Structured ML Context Pass │
 │  - Regenerative Score │  - Organic Treatment DB  │  - Vernacular Voice/Text      │
 └───────────┬───────────┴────────────┬─────────────┴───────────────┬───────────────┘
             │                        │                             │
