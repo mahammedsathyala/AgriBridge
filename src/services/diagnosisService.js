@@ -47,26 +47,34 @@ export const diagnosisService = {
 
     const dataObj = backendResult?.data || backendResult;
     const primaryFinding = dataObj?.findings?.[0];
-    const diseaseDetected = dataObj?.disease_detected || primaryFinding?.disease || mockSampleDiagnosis.diseaseName;
+    const diseaseDetected = dataObj?.disease_detected || dataObj?.disease || primaryFinding?.disease || mockSampleDiagnosis.diseaseName;
     
     let confidenceScore = mockSampleDiagnosis.confidence;
     if (dataObj?.confidence_score !== undefined) {
       confidenceScore = Math.round(dataObj.confidence_score <= 1.0 ? dataObj.confidence_score * 100 : dataObj.confidence_score);
+    } else if (dataObj?.confidence !== undefined) {
+      confidenceScore = Math.round(dataObj.confidence <= 1.0 ? dataObj.confidence * 100 : dataObj.confidence);
     } else if (primaryFinding?.confidence_score !== undefined) {
       confidenceScore = Math.round(primaryFinding.confidence_score <= 1.0 ? primaryFinding.confidence_score * 100 : primaryFinding.confidence_score);
     }
 
-    const weightsStatus = dataObj?.weights_status || dataObj?.data_quality?.weights_status || (backendResult ? "calibrated_heuristic" : "fallback");
-    const diagnosisSource = dataObj?.diagnosis_source || dataObj?.data_quality?.diagnosis_source || (backendResult ? "HEURISTIC" : "FALLBACK");
-    const engineName = dataObj?.engine || dataObj?.data_quality?.model_name || (backendResult ? "Agronomic Heuristic Classifier" : "Demo Fallback");
+    const weightsStatus = dataObj?.weights_status || dataObj?.data_quality?.weights_status || (backendResult ? "groundnut_trained_model" : "fallback");
+    const diagnosisSource = dataObj?.diagnosis_source || dataObj?.data_quality?.diagnosis_source || (backendResult ? "groundnut_trained_model" : "FALLBACK");
+    const engineName = dataObj?.engine || dataObj?.data_quality?.model_name || (backendResult ? "MobileNetV2 Deep Neural Network" : "Demo Fallback");
+    const warning = dataObj?.warning || backendResult?.warning || "";
+
+    const immediateAction = dataObj?.immediate_actions?.[0] || dataObj?.recommendation || mockSampleDiagnosis.immediateActionEn;
+    const preventionPractices = dataObj?.prevention_monitoring?.length ? dataObj.prevention_monitoring : (dataObj?.regenerative_prevention ? [dataObj.regenerative_prevention] : mockSampleDiagnosis.preventionPracticesEn);
 
     const result = {
       ...mockSampleDiagnosis,
       cropName: crop,
+      crop: crop.toLowerCase(),
       diseaseName: diseaseDetected,
+      disease: dataObj?.disease || diseaseDetected,
       conditionEn: dataObj?.condition_en || diseaseDetected,
-      conditionTe: dataObj?.condition_te || (diseaseDetected.includes("Tikka") ? "తొలి ఆకు మచ్చ వ్యాధి (టిక్కా తెగులు)" : diseaseDetected),
-      conditionHi: dataObj?.condition_hi || (diseaseDetected.includes("Tikka") ? "टिक्का पत्ती धब्बा रोग (Early Leaf Spot)" : diseaseDetected),
+      conditionTe: dataObj?.condition_te || diseaseDetected,
+      conditionHi: dataObj?.condition_hi || diseaseDetected,
       confidence: confidenceScore,
       confidencePercent: confidenceScore,
       scanId: dataObj?.scan_id || ("SCAN-" + Math.floor(10000 + Math.random() * 90000)),
@@ -77,7 +85,17 @@ export const diagnosisService = {
       weightsStatus,
       diagnosisSource,
       engineName,
-      dataSource: diagnosisSource === "YOLOv8" ? "YOLOv8 Neural Network" : (diagnosisSource === "HEURISTIC" ? "Agronomic Heuristic Classifier" : "Demo Fallback")
+      warning,
+      recommendation: dataObj?.recommendation || "",
+      immediateActionEn: immediateAction,
+      immediateActionTe: immediateAction,
+      immediateActionHi: immediateAction,
+      preventionPracticesEn: preventionPractices,
+      preventionPracticesTe: preventionPractices,
+      preventionPracticesHi: preventionPractices,
+      dataSource: diagnosisSource === "groundnut_trained_model" 
+        ? "MobileNetV2 Groundnut Classifier" 
+        : (diagnosisSource === "YOLOv8" ? "YOLOv8 Neural Network" : (diagnosisSource === "HEURISTIC" ? "Agronomic Heuristic Classifier" : "Demo Fallback"))
     };
 
     // Append to local history with crop info

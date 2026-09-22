@@ -1,9 +1,9 @@
 """
 AgriN LLM Advisory Localizer (MVP 4: Anthropic Claude Integration)
 ------------------------------------------------------------------
-Converts structured agro-ecological telemetry (MVP 2: soil, weather, satellite NDVI)
-and computer vision diagnostics (MVP 3: YOLOv8) into concise, respectful,
-vernacular voice/text briefings for smallholder farmers across BRICS languages.
+Converts structured agro-ecological telemetry (soil, weather, satellite NDVI)
+and Groundnut computer vision diagnostics (MobileNetV2 / YOLOv8) into concise,
+respectful, vernacular voice/text briefings for smallholder farmers across BRICS languages.
 """
 
 from typing import Dict, Any, List, Optional
@@ -77,6 +77,7 @@ class LLMAdvisoryLocalizer:
         crop_name = (
             adv.get("crop")
             or adv.get("crop_name")
+            or diag.get("crop")
             or top_rec.get("crop")
             or prof.get("crop")
             or "Groundnut"
@@ -141,9 +142,21 @@ class LLMAdvisoryLocalizer:
 
         # 7. Disease Detection Data
         diag_primary = diag.get("primary_diagnosis", {})
-        disease_name = diag_primary.get("condition") or diag.get("condition")
-        disease_severity = diag_primary.get("severity") or diag.get("severity")
-        remedy_list = diag.get("organic_treatment_plan", [])
+        disease_name = (
+            diag.get("disease")
+            or diag_primary.get("condition")
+            or diag.get("disease_detected")
+            or diag.get("condition")
+        )
+        disease_confidence = diag.get("confidence") or diag_primary.get("confidence") or diag.get("confidence_score")
+        disease_severity = diag_primary.get("severity") or diag.get("severity") or "Moderate"
+        disease_warning = diag.get("warning") or diag_primary.get("warning")
+        what_it_means = diag.get("what_it_means") or diag_primary.get("description")
+        what_to_check = diag.get("what_to_check", [])
+        immediate_actions = diag.get("immediate_actions", diag.get("organic_treatment_plan", []))
+        prevention_monitoring = diag.get("prevention_monitoring", [])
+        when_to_consult = diag.get("when_to_consult", "")
+        remedy_list = diag.get("organic_treatment_plan", []) or diag.get("remedies", {}).get("organic", [])
         disease_remedy = remedy_list[0] if remedy_list else None
 
         # Build context sources summary for safe logging
@@ -179,8 +192,15 @@ class LLMAdvisoryLocalizer:
             "canopy_status": canopy_status,
             "satellite_source": satellite_source,
             "disease_name": disease_name,
+            "disease_confidence": disease_confidence,
             "disease_severity": disease_severity,
+            "disease_warning": disease_warning,
             "disease_remedy": disease_remedy,
+            "what_it_means": what_it_means,
+            "what_to_check": what_to_check,
+            "immediate_actions": immediate_actions,
+            "prevention_monitoring": prevention_monitoring,
+            "when_to_consult": when_to_consult,
             "context_sources": sources_present
         }
 
@@ -192,6 +212,12 @@ class LLMAdvisoryLocalizer:
         weather_desc: str,
         disease_name: Optional[str] = None,
         disease_remedy: Optional[str] = None,
+        disease_confidence: Optional[Any] = None,
+        what_it_means: Optional[str] = None,
+        what_to_check: Optional[List[str]] = None,
+        immediate_actions: Optional[List[str]] = None,
+        prevention_monitoring: Optional[List[str]] = None,
+        when_to_consult: Optional[str] = None,
         language: str = "en",
         query: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -200,34 +226,29 @@ class LLMAdvisoryLocalizer:
         culturally grounded vernacular farm guidance across BRICS languages.
         """
         lang = language.lower()[:2]
-        is_disease = bool(disease_name and disease_name != "Healthy Plant Foliage (No Active Pathogen Detected)")
+        is_disease = bool(disease_name and "healthy" not in disease_name.lower())
         q_lower = (query or "").lower()
+
+        # Format confidence string
+        conf_str = f" ({disease_confidence})" if disease_confidence else ""
 
         # Telugu
         if lang == "te":
-            if "yellow" in q_lower or "పసుపు" in q_lower:
-                audio = f"నమస్కారం రైతు గారు. మీ {crop_name} పంటలో ఆకులు పసుపు రంగుకు మారడానికి నత్రజని లేదా సూక్ష్మ పోషకాల లోపం కారణం కావచ్చు. ప్రస్తుత {weather_desc} వాతావరణంలో జీవామృతం లేదా 5% వేప కషాయం పిచికారీ చేయండి."
-                actions = [
-                    f"{crop_name} మొక్కల మొదట్లో జీవామృతం లేదా వేప పిండి వేయండి.",
-                    "మట్టిలో నీటి నిల్వ లేకుండా పారుదల సౌకర్యం పరిశీలించండి.",
-                    "స్పష్టమైన నిర్ధారణ కోసం వ్యాధి నిర్ధారణ విభాగంలో ఆకు ఫోటో తీసి పరిశీలించండి."
-                ]
-            elif is_disease:
+            if is_disease:
                 audio = (
-                    f"రైతు సోదరులకు నమస్కారం. మీ పంట ఆకులను పరిశీలించగా '{disease_name}' లక్షణాలు కనిపించాయి. "
+                    f"రైతు సోదరులకు నమస్కారం. మీ {crop_name} పంట ఆకులలో '{disease_name}' లక్షణాలు గుర్తించబడ్డాయి{conf_str}. "
                     f"వెంటనే {disease_remedy or '5% వేప గింజల కషాయం (NSKE)'} పిచికారీ చేయండి. "
-                    f"వాతావరణం {weather_desc}గా ఉంది కాబట్టి తేమ ఆరిపోయేలా చూడండి."
+                    f"ప్రస్తుత వాతావరణం {weather_desc}గా ఉంది, నీటి నిల్వ లేకుండా పారుదల చూసుకోండి."
                 )
-                actions = [
+                actions = immediate_actions[:3] if immediate_actions else [
                     f"వెంటనే నివారణ చర్య: {disease_remedy or 'వేప నూనె లేదా ట్రైకోడెర్మా పిచికారీ'}.",
-                    "తెగులు సోకిన ఆకులను ఏరివేసి భూమిలో పూడ్చిపెట్టండి.",
-                    f"నేల బలానికి {companion_crop} అంతర పంటగా వేయండి."
+                    "తెగులు సోకిన దిగువ ఆకులను ఏరివేసి భూమిలో పూడ్చిపెట్టండి.",
+                    f"వ్యాధి వ్యాప్తిని అరికట్టడానికి {companion_crop} అంతర పంటగా వేయండి."
                 ]
             else:
                 audio = (
                     f"రైతు సోదరులకు నమస్కారం. ప్రస్తుత వాతావరణం ({weather_desc}) మరియు మీ నేల ప్రకారం '{crop_name}' సాగు చేయడం అత్యంత లాభదాయకం. "
-                    f"దీనితో పాటు '{companion_crop}'ను అంతర పంటగా వేస్తే భూసారం పెరుగుతుంది. "
-                    f"నీటి ఆవిరిని అరికట్టడానికి నేలపై ఆకుల రక్షణ కవచం (మల్చింగ్) వేయండి."
+                    f"దీనితో పాటు '{companion_crop}'ను అంతర పంటగా వేస్తే భూసారం పెరుగుతుంది."
                 )
                 actions = [
                     f"ప్రధాన పంటగా {crop_name} మరియు అంతర పంటగా {companion_crop}ను ఎంచుకోండి.",
@@ -246,29 +267,20 @@ class LLMAdvisoryLocalizer:
 
         # Hindi
         elif lang == "hi":
-            if "yellow" in q_lower or "पीली" in q_lower or "पत्ता" in q_lower:
-                audio = f"किसान भाइयों को सादर प्रणाम। आपकी {crop_name} फसल में पत्तियों का पीला पड़ना नाइट्रोजन या सूक्ष्म पोषक तत्वों की कमी हो सकता है। {weather_desc} मौसम में जीवामृत या 5% नीम काढ़ा का छिड़काव करें।"
-                actions = [
-                    f"{crop_name} की जड़ों के पास वर्मीकम्पोस्ट या जीवामृत डालें।",
-                    "खेत में जलजमाव की जांच करें और जल निकासी सुनिश्चित करें।",
-                    "सटीक जांच के लिए रोग निदान टैब में पत्ती की तस्वीर अपलोड करें।"
-                ]
-            elif is_disease:
+            if is_disease:
                 audio = (
-                    f"किसान भाइयों को सादर प्रणाम। आपकी फसल में '{disease_name}' के लक्षण पाए गए हैं। "
-                    f"इसके तुरंत समाधान के लिए {disease_remedy or '5% नीम के बीज का काढ़ा (NSKE)'} का छिड़काव करें। "
-                    f"वर्तमान मौसम {weather_desc} है, जल निकासी का उचित प्रबंध रखें।"
+                    f"किसान भाइयों को सादर प्रणाम। आपकी {crop_name} फसल में '{disease_name}' के लक्षण पाए गए हैं{conf_str}। "
+                    f"इसके तुरंत जैविक समाधान के लिए {disease_remedy or '5% नीम के बीज का काढ़ा (NSKE)'} का छिड़काव करें।"
                 )
-                actions = [
+                actions = immediate_actions[:3] if immediate_actions else [
                     f"तत्काल जैविक उपचार: {disease_remedy or 'नीम तेल अथवा ट्राइकोडर्मा का छिड़काव'}.",
                     "संक्रमित पत्तियों को खेत से हटाकर नष्ट करें।",
-                    f"खेत में {companion_crop} को अंतःफसल (intercrop) के रूप में लगाएं।"
+                    f"खेत में {companion_crop} को अंतःफसल के रूप में लगाएं।"
                 ]
             else:
                 audio = (
                     f"किसान भाइयों को सादर प्रणाम। आपकी मिट्टी और मौसम ({weather_desc}) को देखते हुए '{crop_name}' की बुवाई सबसे उपयुक्त है। "
-                    f"इसके साथ '{companion_crop}' को सह-फसल बनाकर लगाएं जिससे जमीन की उर्वरक शक्ति बढ़ेगी। "
-                    f"मिट्टी की नमी बचाने के लिए जैविक मल्चिंग अवश्य करें।"
+                    f"इसके साथ '{companion_crop}' को सह-फसल बनाकर लगाएं जिससे जमीन की उर्वरक शक्ति बढ़ेगी।"
                 )
                 actions = [
                     f"मुख्य फसल {crop_name} के साथ {companion_crop} की अंतःफसल बुवाई करें।",
@@ -285,112 +297,50 @@ class LLMAdvisoryLocalizer:
                 "why_this_works": "दलहनी सह-फसलें हवा से नाइट्रोजन खींचकर जमीन को उपजाऊ बनाती हैं।"
             }
 
-        # Portuguese
-        elif lang == "pt":
-            audio = (
-                f"Prezado produtor rural. Para as condições atuais de solo e clima ({weather_desc}), "
-                f"recomendamos o plantio regenerativo de {crop_name} consorciado com {companion_crop}. "
-                f"Mantenha a cobertura vegetal do solo para reter umidade e fertilidade."
-            )
-            actions = [
-                f"Semeadura de {crop_name} com consórcio de {companion_crop}.",
-                f"Prática de regeneração: {primary_practice}.",
-                "Reduzir o revolvimento do solo através do plantio direto."
-            ]
-            return {
-                "language": "Portuguese (Português)",
-                "audio_script": audio,
-                "answer": audio + "\n\n" + "\n".join([f"• {a}" for a in actions]),
-                "urgent_actions": actions,
-                "risk_bulletin": f"Condição agroclimática: {weather_desc}. Monitorar índice de estresse hídrico.",
-                "why_this_works": "Aumenta a matéria orgânica do solo e reduz os custos com adubação sintética."
-            }
-
-        # Russian
-        elif lang == "ru":
-            audio = (
-                f"Здравствуйте, уважаемый фермер. Учитывая текущую погоду ({weather_desc}) и структуру почвы, "
-                f"рекомендуем культивацию {crop_name} в комбинации с {companion_crop}. "
-                f"Применяйте мульчирование для сохранения влаги и микробиома почвы."
-            )
-            actions = [
-                f"Посев культуры {crop_name} с культурой-спутником {companion_crop}.",
-                f"Агрономическая мера: {primary_practice}.",
-                "Минимальная обработка почвы (No-Till)."
-            ]
-            return {
-                "language": "Russian (Русский)",
-                "audio_script": audio,
-                "answer": audio + "\n\n" + "\n".join([f"• {a}" for a in actions]),
-                "urgent_actions": actions,
-                "risk_bulletin": f"Погодные условия: {weather_desc}.",
-                "why_this_works": "Повышает биологическую фиксацию азота и устойчивость к климатическим рискам."
-            }
-
-        # Chinese
-        elif lang == "zh":
-            audio = (
-                f"农户朋友你好。根据当前的气候条件（{weather_desc}）与土壤状况，"
-                f"推荐种植再生作物 {crop_name}，并搭配伴生作物 {companion_crop}。"
-                f"请保持地表秸秆覆盖，以保护土壤微生物与水分。"
-            )
-            actions = [
-                f"种植主作物 {crop_name} 并间作 {companion_crop}。",
-                f"土壤修复措施：{primary_practice}。",
-                "采用免耕或少耕技术减少水土流失。"
-            ]
-            return {
-                "language": "Mandarin Chinese (中文)",
-                "audio_script": audio,
-                "answer": audio + "\n\n" + "\n".join([f"• {a}" for a in actions]),
-                "urgent_actions": actions,
-                "risk_bulletin": f"天气状况：{weather_desc}。注意田间水分调控。",
-                "why_this_works": "伴生豆科作物能固定空气中的氮素，显著降低化肥投入成本。"
-            }
-
         # English (default)
         else:
-            if "yellow" in q_lower or "leaf" in q_lower or "leaves" in q_lower:
+            if is_disease:
                 audio = (
-                    f"Hello farmer friend. Yellowing in {crop_name} leaves typically indicates nitrogen/iron deficiency, "
-                    f"root moisture imbalance, or early Tikka leaf spot. In current {weather_desc} conditions, "
-                    f"inspect root nodulation and apply Jeevamrutha or fermented compost tea."
+                    f"Hello farmer friend. Computer vision screening diagnosed '{disease_name}'{conf_str} on your {crop_name} leaves. "
+                    f"Apply {disease_remedy or '5% Neem Seed Kernel Extract (NSKE)'} immediately to halt spread."
                 )
-                actions = [
-                    f"Inspect the undersides of {crop_name} leaves for brown circular spots (early leaf spot).",
-                    "Check soil moisture and ensure no root waterlogging or severe dry crusting.",
-                    "Apply foliar bio-stimulant (5% Neem Seed Kernel Extract or vermiwash) to stimulate chlorophyll synthesis."
-                ]
-            elif is_disease:
-                audio = (
-                    f"Hello farmer friend. Visual scan detected symptoms of '{disease_name}'. "
-                    f"Apply {disease_remedy or '5% Neem Seed Kernel Extract (NSKE)'} immediately to halt spore spread. "
-                    f"Current weather is {weather_desc}, so ensure good inter-row drainage."
-                )
-                actions = [
+                actions = immediate_actions[:3] if immediate_actions else [
                     f"Immediate remedy: Apply {disease_remedy or 'neem oil / Trichoderma biocontrol'}.",
                     "Prune and deeply compost heavily infected lower leaves.",
                     f"Intercrop with {companion_crop} to break future pathogen cycles."
                 ]
+                explanation_sections = []
+                if what_it_means:
+                    explanation_sections.append(f"**What This Means:** {what_it_means}")
+                if what_to_check:
+                    explanation_sections.append(f"**Field Checkpoints:**\n" + "\n".join([f"- {c}" for c in what_to_check]))
+                if actions:
+                    explanation_sections.append(f"**Immediate Actions:**\n" + "\n".join([f"- {a}" for a in actions]))
+                if prevention_monitoring:
+                    explanation_sections.append(f"**Prevention & Monitoring:**\n" + "\n".join([f"- {p}" for p in prevention_monitoring]))
+                if when_to_consult:
+                    explanation_sections.append(f"**When to Consult Expert:** {when_to_consult}")
+
+                answer_full = "\n\n".join(explanation_sections) if explanation_sections else audio + "\n\n" + "\n".join([f"• {a}" for a in actions])
             else:
                 audio = (
                     f"Hello farmer friend. For your current soil and {weather_desc} weather conditions, "
-                    f"growing '{crop_name}' intercropped with '{companion_crop}' will maximize your yield. "
-                    f"Keep your topsoil covered with residue mulch to lock in moisture."
+                    f"growing '{crop_name}' intercropped with '{companion_crop}' will maximize your yield."
                 )
                 actions = [
                     f"Sow primary crop {crop_name} intercropped with {companion_crop}.",
                     f"Soil regeneration action: {primary_practice}.",
                     "Apply fermented organic compost or Jeevamrutha to minimize chemical fertilizer dependency."
                 ]
+                answer_full = audio + "\n\n" + "\n".join([f"• {a}" for a in actions])
 
             return {
                 "language": "English",
                 "audio_script": audio,
-                "answer": audio + "\n\n" + "\n".join([f"• {a}" for a in actions]),
+                "answer": answer_full,
                 "urgent_actions": actions,
                 "risk_bulletin": f"Weather profile is {weather_desc}. Maintain in-situ moisture retention.",
-                "why_this_works": "Biological nitrogen fixation from companion legumes adds natural fertility while cutting input costs."
+                "why_this_works": "Biological crop management and organic remedies restore plant vigor and cut input costs."
             }
 
     def generate_plain_advisory(
@@ -405,7 +355,6 @@ class LLMAdvisoryLocalizer:
         Generate plain-language farmer guidance using Anthropic Claude
         (or calibrated vernacular engine if API key is not configured or API fails).
         """
-        # Re-check API key dynamically in case environment was loaded after import
         self._init_anthropic_client()
 
         # Extract comprehensive farm context
@@ -422,16 +371,23 @@ class LLMAdvisoryLocalizer:
         if self.client is not None:
             try:
                 system_prompt = (
-                    "You are AgriN, an empathetic, expert agricultural advisor speaking directly to a smallholder "
+                    f"You are AgriN, an empathetic, expert agricultural advisor speaking directly to a smallholder "
                     f"farmer in their native language: {lang_name}. "
-                    "Convert the technical agronomic, soil, weather, satellite NDVI, sensor telemetry, and disease data into a simple, encouraging, respectful briefing. "
-                    "If the farmer asked a specific question, directly address their question using their actual farm conditions. "
-                    "Avoid academic jargon. Structure your output STRICTLY as valid JSON with keys: "
-                    "'answer' (a comprehensive, practical response addressing the farmer's question or farm condition), "
+                    "Convert technical agro-ecological telemetry and computer vision disease diagnoses into an actionable, encouraging briefing.\n\n"
+                    "CRITICAL DIAGNOSIS RULES:\n"
+                    "- If a disease diagnosis is provided (from the Groundnut ML Classifier), you MUST NOT change, contradict, or re-diagnose it.\n"
+                    "- Structure your advisory around the ML diagnosis by explaining:\n"
+                    "  1. What the diagnosis means for the crop\n"
+                    "  2. What symptoms the farmer should inspect in the field\n"
+                    "  3. Immediate practical organic/biological remedies\n"
+                    "  4. Preventive practices and ongoing monitoring\n"
+                    "  5. When agricultural extension / expert consultation is required\n\n"
+                    "Structure your output STRICTLY as valid JSON with keys: "
+                    "'answer' (comprehensive, practical response covering the 5 points or answering query), "
                     "'audio_script' (a 2-3 sentence conversational message ready for voice audio), "
                     "'urgent_actions' (list of 2-3 short bullet tasks for this week), "
                     "'risk_bulletin' (one sentence on weather or disease risks), "
-                    "'why_this_works' (one sentence explaining how this rebuilds soil and saves fertilizer money)."
+                    "'why_this_works' (one sentence explaining how this rebuilds soil and saves money)."
                 )
 
                 farm_context_payload = {
@@ -471,15 +427,23 @@ class LLMAdvisoryLocalizer:
                         "soil_temperature_c": ctx["sensor_node"].get("soil_temperature_c"),
                         "status": ctx["sensor_node"].get("status")
                     },
-                    "disease_detection": {
-                        "detected_condition": ctx["disease_name"] or "None (Healthy)",
+                    "groundnut_ml_diagnosis": {
+                        "crop": ctx["crop_name"],
+                        "predicted_disease": ctx["disease_name"] or "None (Healthy Leaf)",
+                        "model_confidence": ctx["disease_confidence"],
                         "severity": ctx["disease_severity"],
+                        "safety_warning": ctx["disease_warning"],
+                        "what_it_means": ctx["what_it_means"],
+                        "field_checkpoints": ctx["what_to_check"],
+                        "immediate_actions": ctx["immediate_actions"],
+                        "prevention_monitoring": ctx["prevention_monitoring"],
+                        "when_to_consult": ctx["when_to_consult"],
                         "organic_remedy": ctx["disease_remedy"] or "Preventive bio-stimulant"
                     }
                 }
 
                 user_prompt = f"""Language Requested: {lang_name}
-Farmer Query: {user_query or "Provide this week's agronomic advisory based on my farm telemetry."}
+Farmer Query: {user_query or f"Explain the {ctx['disease_name'] or 'crop'} diagnosis and what I should do next on my farm."}
 
 Comprehensive Field & Telemetry Context:
 {json.dumps(farm_context_payload, indent=2, default=str)}
@@ -493,7 +457,6 @@ Comprehensive Field & Telemetry Context:
                 )
 
                 content_text = response.content[0].text.strip()
-                # Parse JSON
                 if "{" in content_text and "}" in content_text:
                     json_str = content_text[content_text.find("{"):content_text.rfind("}") + 1]
                     parsed = json.loads(json_str)
@@ -521,7 +484,6 @@ Comprehensive Field & Telemetry Context:
                         "why_this_works": why_this_works
                     }
                 else:
-                    # Non-JSON plain text from Claude
                     print("[AgriAI] status=LIVE")
                     print("[AgriAI] response_received=true")
                     return {
@@ -533,13 +495,12 @@ Comprehensive Field & Telemetry Context:
                         "language": lang_name,
                         "answer": content_text,
                         "audio_script": content_text[:300],
-                        "urgent_actions": ["Follow recommendations derived from current farm telemetry."],
+                        "urgent_actions": ["Follow organic recommendations derived from ML diagnosis and telemetry."],
                         "risk_bulletin": f"Agro-climatic condition is {ctx['weather_desc']}.",
                         "why_this_works": "Regenerative soil inputs enhance natural micro-ecology."
                     }
             except Exception as exc:
                 err_msg = str(exc)
-                # Ensure no secrets in logs
                 clean_err = err_msg.replace(self.api_key, "[REDACTED]") if self.api_key else err_msg
                 print(f"[AgriAI] status=FALLBACK")
                 print(f"[AgriAI] response_received=false")
@@ -557,6 +518,12 @@ Comprehensive Field & Telemetry Context:
             weather_desc=ctx["weather_desc"],
             disease_name=ctx["disease_name"],
             disease_remedy=ctx["disease_remedy"],
+            disease_confidence=ctx["disease_confidence"],
+            what_it_means=ctx["what_it_means"],
+            what_to_check=ctx["what_to_check"],
+            immediate_actions=ctx["immediate_actions"],
+            prevention_monitoring=ctx["prevention_monitoring"],
+            when_to_consult=ctx["when_to_consult"],
             language=language,
             query=user_query
         )

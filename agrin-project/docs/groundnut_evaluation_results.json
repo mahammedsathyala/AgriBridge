@@ -1,0 +1,114 @@
+{
+  "dataset_path": "c:\\Users\\satha\\OneDrive\\Desktop\\AgriBridge\\datasets\\groundnut\\Raw_Data",
+  "total_images": 3058,
+  "classes": [
+    "early_leaf_spot",
+    "healthy leaf",
+    "late leaf spot",
+    "nutrition deficiency",
+    "rust"
+  ],
+  "splits": {
+    "train_count": 2140,
+    "validation_count": 459,
+    "test_count": 459
+  },
+  "model_architecture": "MobileNetV2 + Custom Dense Head",
+  "input_shape": [
+    224,
+    224,
+    3
+  ],
+  "test_metrics": {
+    "loss": 0.8150440454483032,
+    "accuracy": 0.727668821811676,
+    "weighted_precision": 0.7322252226574307,
+    "weighted_recall": 0.7276688453159041,
+    "weighted_f1_score": 0.7200338328111312
+  },
+  "per_class_metrics": {
+    "early_leaf_spot": {
+      "precision": 0.6486486486486487,
+      "recall": 0.5413533834586466,
+      "f1-score": 0.5901639344262295,
+      "support": 133.0
+    },
+    "healthy leaf": {
+      "precision": 0.8031496062992126,
+      "recall": 0.7338129496402878,
+      "f1-score": 0.7669172932330827,
+      "support": 139.0
+    },
+    "late leaf spot": {
+      "precision": 0.6824324324324325,
+      "recall": 0.9711538461538461,
+      "f1-score": 0.8015873015873016,
+      "support": 104.0
+    },
+    "nutrition deficiency": {
+      "precision": 0.803921568627451,
+      "recall": 0.8367346938775511,
+      "f1-score": 0.82,
+      "support": 49.0
+    },
+    "rust": {
+      "precision": 0.8181818181818182,
+      "recall": 0.5294117647058824,
+      "f1-score": 0.6428571428571429,
+      "support": 34.0
+    },
+    "accuracy": 0.7276688453159041,
+    "macro avg": {
+      "precision": 0.7512668148379126,
+      "recall": 0.7224933275672427,
+      "f1-score": 0.7243051344207514,
+      "support": 459.0
+    },
+    "weighted avg": {
+      "precision": 0.7322252226574307,
+      "recall": 0.7276688453159041,
+      "f1-score": 0.7200338328111312,
+      "support": 459.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      72,
+      25,
+      30,
+      4,
+      2
+    ],
+    [
+      29,
+      102,
+      3,
+      5,
+      0
+    ],
+    [
+      2,
+      0,
+      101,
+      0,
+      1
+    ],
+    [
+      5,
+      0,
+      2,
+      41,
+      1
+    ],
+    [
+      3,
+      0,
+      12,
+      1,
+      18
+    ]
+  ],
+  "model_weights_path": "c:\\Users\\satha\\OneDrive\\Desktop\\AgriBridge\\agrin-project\\backend\\model_weights\\groundnut_disease.keras",
+  "class_names_path": "c:\\Users\\satha\\OneDrive\\Desktop\\AgriBridge\\agrin-project\\backend\\model_weights\\groundnut_class_names.json",
+  "confusion_matrix_plot_path": "c:\\Users\\satha\\OneDrive\\Desktop\\AgriBridge\\agrin-project\\docs\\groundnut_confusion_matrix.png"
+}

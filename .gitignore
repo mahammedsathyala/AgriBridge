@@ -43,8 +43,17 @@ Thumbs.db
 .coverage
 htmlcov/
 
+# Datasets and Large Vision Models
+dataset/
+datasets/
+*.h5
+*.keras
+*.pt
+*.pth
+
 # Databases
 *.db
 *.sqlite
 *.sqlite3
 agrin-project/backend/*.db
+

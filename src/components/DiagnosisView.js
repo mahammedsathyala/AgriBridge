@@ -110,7 +110,7 @@ export function renderDiagnosisView(container) {
                   ${t('diagnosis.analyzingText')}
                 </div>
                 <div style="font-size: 0.82rem; color: var(--text-muted); max-width: 320px;">
-                  Running neural computer vision filter, spectral chlorosis analysis, and ICAR plant pathology rule matching...
+                  Running MobileNetV2 deep neural inference, spectral chlorosis analysis, and ICAR pathology matching...
                 </div>
               </div>
             ` : diagnosisResult ? `
@@ -122,35 +122,45 @@ export function renderDiagnosisView(container) {
                       <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-amber-600); text-transform: uppercase;">
                         ${t('diagnosis.resultTitle')}
                       </div>
-                      ${diagnosisResult.diagnosisSource === 'YOLOv8' ? `
+                      ${diagnosisResult.diagnosisSource === 'groundnut_trained_model' ? `
+                        <span style="font-size: 0.68rem; background: #d8f3dc; color: #1b4332; border: 1px solid #b7e4c7; padding: 1px 6px; border-radius: 10px; font-weight: 600;">⚡ Groundnut Deep Learning (MobileNetV2)</span>
+                      ` : (diagnosisResult.diagnosisSource === 'YOLOv8' ? `
                         <span style="font-size: 0.68rem; background: #d8f3dc; color: #1b4332; border: 1px solid #b7e4c7; padding: 1px 6px; border-radius: 10px; font-weight: 600;">⚡ YOLOv8 Neural Inference</span>
                       ` : (diagnosisResult.diagnosisSource === 'HEURISTIC' ? `
                         <span style="font-size: 0.68rem; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 1px 6px; border-radius: 10px; font-weight: 600;">🔬 Agronomic Heuristic (RGB Spectrum)</span>
                       ` : `
                         <span style="font-size: 0.68rem; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 1px 6px; border-radius: 10px; font-weight: 600;">⚠️ Offline Fallback</span>
-                      `)}
+                      `))}
                     </div>
                     <div class="diagnosis-condition-name">
-                      ${isTe ? diagnosisResult.conditionTe : (isHi ? (diagnosisResult.conditionHi || 'టिक्కా पत्ती धब्बा रोग (Early Leaf Spot)') : diagnosisResult.conditionEn)}
+                      ${isTe ? diagnosisResult.conditionTe : (isHi ? (diagnosisResult.conditionHi || diagnosisResult.conditionEn) : diagnosisResult.conditionEn)}
                     </div>
                     <div style="font-size: 0.78rem; font-style: italic; color: var(--text-muted);">
-                      Pathogen: ${diagnosisResult.pathogen}
+                      Crop: ${diagnosisResult.cropName || 'Groundnut'} | Class: ${diagnosisResult.diseaseName || diagnosisResult.disease}
                     </div>
                   </div>
 
                   <div style="text-align: right;">
-                    <div class="badge badge-warning" style="font-size: 0.9rem; padding: 4px 10px;">
+                    <div class="badge ${diagnosisResult.confidencePercent < 60 ? 'badge-danger' : 'badge-warning'}" style="font-size: 0.9rem; padding: 4px 10px;">
                       ${diagnosisResult.confidencePercent}% ${t('diagnosis.confidenceLabel')}
                     </div>
                     <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
-                      ${isTe ? diagnosisResult.severityLevelTe : (isHi ? (diagnosisResult.severityLevelHi || 'मध्यम गंभीरता (चरण 2)') : diagnosisResult.severityLevel)}
+                      ${isTe ? diagnosisResult.severityLevelTe : (isHi ? (diagnosisResult.severityLevelHi || 'मध्यम गंभीरता') : diagnosisResult.severityLevel)}
                     </div>
                   </div>
                 </div>
 
+                <!-- Safety Warning if Low Confidence -->
+                ${(diagnosisResult.warning || diagnosisResult.confidencePercent < 60) ? `
+                  <div style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px 14px; border-radius: var(--radius-md); margin: var(--space-3) 0; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <span>⚠️</span>
+                    <span>${diagnosisResult.warning || "The model is not sufficiently confident. Please upload a clearer leaf image or consult an agricultural expert."}</span>
+                  </div>
+                ` : ''}
+
                 <!-- Confidence visualization bar -->
                 <div class="confidence-bar">
-                  <div style="height: 100%; width: ${diagnosisResult.confidencePercent}%; background: #f59e0b; border-radius: var(--radius-full);"></div>
+                  <div style="height: 100%; width: ${diagnosisResult.confidencePercent}%; background: ${diagnosisResult.confidencePercent < 60 ? '#ef4444' : '#f59e0b'}; border-radius: var(--radius-full);"></div>
                 </div>
 
                 <!-- Affected Canopy Area -->
@@ -183,7 +193,7 @@ export function renderDiagnosisView(container) {
                     ⚡ ${t('diagnosis.immediateActionTitle')}
                   </div>
                   <div style="font-size: 0.82rem; line-height: 1.4; color: var(--color-primary-900);">
-                    ${isTe ? diagnosisResult.immediateActionTe : (isHi ? (diagnosisResult.immediateActionHi || 'ट्राइकोडर्मा हरजिएनम (5 ग्राम/लीटर) या 5% नीम के बीज के अर्क (NSKE) का छिड़काव करें। सिंचाई 24 घंटे टालें।') : diagnosisResult.immediateActionEn)}
+                    ${isTe ? diagnosisResult.immediateActionTe : (isHi ? (diagnosisResult.immediateActionHi || diagnosisResult.immediateActionEn) : diagnosisResult.immediateActionEn)}
                   </div>
                 </div>
 
@@ -193,12 +203,7 @@ export function renderDiagnosisView(container) {
                     🛡️ ${t('diagnosis.preventionTitle')}
                   </div>
                   <ul style="font-size: 0.8rem; padding-left: 18px; color: var(--text-secondary); line-height: 1.4;">
-                    ${(isTe ? diagnosisResult.preventionPracticesTe : (isHi ? (diagnosisResult.preventionPracticesHi || [
-                      'फसल चक्र: गैर-दलहनी फसलों (जैसे ज्वार या बाजरा) के साथ चक्रण करें',
-                      'खेत की स्वच्छता: पिछली फसल के संक्रमित अवशेषों को नष्ट करें',
-                      'प्रतिरोधी किस्में: प्रमाणित बीज (कदिरी-6, कदिरी-9) का उपयोग करें',
-                      'जल निकास: खेत में जलभराव न होने दें'
-                    ]) : diagnosisResult.preventionPracticesEn)).map(p => `
+                    ${(isTe ? diagnosisResult.preventionPracticesTe : (isHi ? (diagnosisResult.preventionPracticesHi || diagnosisResult.preventionPracticesEn) : diagnosisResult.preventionPracticesEn)).map(p => `
                       <li>${p}</li>
                     `).join('')}
                   </ul>
@@ -256,7 +261,7 @@ export function renderDiagnosisView(container) {
                     <td style="padding: 10px; font-weight: 600;">${h.date}</td>
                     <td style="padding: 10px;">${isTe ? (h.cropTe || h.crop) : (isHi ? (HI_CROPS[h.crop] || h.crop) : h.crop)}</td>
                     <td style="padding: 10px; font-weight: 700; color: var(--color-primary-900);">
-                      ${isTe ? (h.diagnosisTe || h.diagnosis) : (isHi ? (h.diagnosisHi || (h.diagnosis?.includes('Tikka') || h.diagnosis?.includes('Leaf Spot') ? 'टिक्का पत्ती धब्बा रोग' : h.diagnosis)) : h.diagnosis)}
+                      ${isTe ? (h.diagnosisTe || h.diagnosis) : (isHi ? (h.diagnosisHi || h.diagnosis) : h.diagnosis)}
                     </td>
                     <td style="padding: 10px;">
                       <span class="badge badge-warning">${h.confidence}</span>
@@ -327,8 +332,8 @@ export function renderDiagnosisView(container) {
         isAnalyzing = false;
         await loadHistory();
         showToast(
-          isTe ? "వ్యాధి విశ్లేషణ పూర్తయింది: తొలి ఆకు మచ్చ వ్యాధి గుర్తించబడింది." : "Diagnostic analysis complete: Groundnut Leaf Spot detected.",
-          "warning"
+          isTe ? "వ్యాధి విశ్లేషణ పూర్తయింది: వేరుశనగ ఆకు వ్యాధి గుర్తించబడింది." : `Diagnostic analysis complete: ${result.diseaseName || 'Condition identified'}`,
+          result.confidencePercent < 60 ? "warning" : "success"
         );
       } catch (err) {
         isAnalyzing = false;

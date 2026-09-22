@@ -119,9 +119,9 @@ class TestDiagnosisTransparencyAuditFix:
 
         assert resp["status"] == "success"
         assert "weights_status" in resp
-        assert resp["weights_status"] in ("calibrated_heuristic", "real_yolov8_nn")
+        assert resp["weights_status"] in ("calibrated_heuristic", "real_yolov8_nn", "groundnut_trained_model")
         assert "diagnosis_source" in resp
-        assert resp["diagnosis_source"] in ("HEURISTIC", "YOLOv8")
+        assert resp["diagnosis_source"] in ("HEURISTIC", "YOLOv8", "groundnut_trained_model")
 
 
 class TestRegenerativeAgricultureAuditFix:

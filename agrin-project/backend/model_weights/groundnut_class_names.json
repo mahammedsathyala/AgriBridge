@@ -1,0 +1,31 @@
+{
+  "classes": [
+    "early_leaf_spot",
+    "healthy leaf",
+    "late leaf spot",
+    "nutrition deficiency",
+    "rust"
+  ],
+  "class_to_idx": {
+    "early_leaf_spot": 0,
+    "healthy leaf": 1,
+    "late leaf spot": 2,
+    "nutrition deficiency": 3,
+    "rust": 4
+  },
+  "idx_to_class": {
+    "0": "early_leaf_spot",
+    "1": "healthy leaf",
+    "2": "late leaf spot",
+    "3": "nutrition deficiency",
+    "4": "rust"
+  },
+  "num_classes": 5,
+  "input_shape": [
+    224,
+    224,
+    3
+  ],
+  "model_architecture": "MobileNetV2 Transfer Learning",
+  "created_at": "2026-09-22"
+}
