@@ -36,9 +36,11 @@ class App {
       document.body.classList.add('low-bandwidth-mode');
     }
 
-    // Set initial locale class if Telugu
+    // Set initial locale class if Telugu or Hindi
     if (getLocale() === 'te') {
       document.body.classList.add('lang-te');
+    } else if (getLocale() === 'hi') {
+      document.body.classList.add('lang-hi');
     }
 
     // Load initial data

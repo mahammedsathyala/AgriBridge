@@ -32,6 +32,7 @@ export function renderSettingsPage(container) {
               <label class="form-label">${t('settings.language')}</label>
               <select id="opt-language" class="form-select">
                 <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
+                <option value="hi" ${currentLocale === 'hi' ? 'selected' : ''}>हिन्दी (Hindi)</option>
                 <option value="te" ${currentLocale === 'te' ? 'selected' : ''}>తెలుగు (Telugu)</option>
               </select>
             </div>
@@ -142,7 +143,10 @@ export function renderSettingsPage(container) {
     // Attach listeners
     container.querySelector('#opt-language')?.addEventListener('change', (e) => {
       setLocale(e.target.value);
-      showToast(e.target.value === 'te' ? "భాష తెలుగుకి మార్చబడింది" : "Language set to English", "success");
+      const langMsg = e.target.value === 'te' 
+        ? "భాష తెలుగుకి మార్చబడింది" 
+        : (e.target.value === 'hi' ? "भाषा बदलकर हिन्दी कर दी गई" : "Language set to English");
+      showToast(langMsg, "success");
     });
 
     container.querySelector('#opt-units')?.addEventListener('change', (e) => {

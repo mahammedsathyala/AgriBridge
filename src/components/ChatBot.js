@@ -2,14 +2,23 @@ import { t, getLocale } from '../i18n/index.js';
 import { advisoryService } from '../services/advisoryService.js';
 
 export function renderChatBot(container) {
+  const currentLocale = getLocale();
+  let defaultBotGreeting = "Namaste Farmer! I am AgriAI, your agronomic assistant. How can I help you today with your crop in Andhra Pradesh?";
+  let defaultDisclaimer = "Decision-support AI guidance.";
+  if (currentLocale === 'te') {
+    defaultBotGreeting = "నమస్కారం రైతు గారు! నేను AgriAI వ్యవసాయ సహాయకుడిని. నీటిపారుదల, ఎరువులు లేదా చీడపీడల గురించి మీకు ఏవైనా సందేహాలు ఉంటే నన్ను అడగవచ్చు.";
+    defaultDisclaimer = "ఇది కేవలం నిర్ణయ సహాయక వ్యవస్థ మాత్రమే.";
+  } else if (currentLocale === 'hi') {
+    defaultBotGreeting = "नमस्ते किसान भाई! मैं AgriAI कृषि सहायक हूँ। आप अपनी फसल, सिंचाई, खाद-उर्वरक या कीट-रोग नियंत्रण के बारे में कोई भी प्रश्न पूछ सकते हैं।";
+    defaultDisclaimer = "यह केवल निर्णय-सहायता प्रणाली है।";
+  }
+
   let messages = [
     {
       sender: 'bot',
-      text: getLocale() === 'te' 
-        ? "నమస్కారం రైతు గారు! నేను AgriAI వ్యవసాయ సహాయకుడిని. నీటిపారుదల, ఎరువులు లేదా చీడపీడల గురించి మీకు ఏవైనా సందేహాలు ఉంటే నన్ను అడగవచ్చు."
-        : "Namaste Farmer! I am AgriAI, your agronomic assistant. How can I help you today with your groundnut crop in Kurnool?",
-      sources: ["ICAR Agro-Advisory Knowledge Graph", "Kurnool Field Station"],
-      disclaimer: getLocale() === 'te' ? "ఇది కేవలం నిర్ణయ సహాయక వ్యవస్థ మాత్రమే." : "Decision-support AI guidance."
+      text: defaultBotGreeting,
+      sources: ["ICAR Agro-Advisory Knowledge Graph", "BRICS AgriN Knowledge Base"],
+      disclaimer: defaultDisclaimer
     }
   ];
 

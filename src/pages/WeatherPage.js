@@ -17,7 +17,26 @@ export function renderWeatherPage(container) {
 
   function render() {
     if (!currentWeather) return;
-    const isTe = getLocale() === 'te';
+    const locale = getLocale();
+    const isTe = locale === 'te';
+    const isHi = locale === 'hi';
+
+    const HI_WEATHER = {
+      'Sunny': 'धूप',
+      'Clear Sky': 'साफ़ आसमान',
+      'Clear': 'साफ़',
+      'Partly Cloudy': 'आंशिक रूप से बादलमय',
+      'Scattered Showers': 'हल्की बारिश',
+      'Humid Overcast': 'उमस भरा बादलमय',
+      'Light Rain': 'हल्की वर्षा',
+      'Moderate Rain': 'मध्यम वर्षा',
+      'Heavy Rain': 'भारी वर्षा',
+      'Thunderstorm': 'गरज के साथ बारिश'
+    };
+
+    const conditionText = isTe 
+      ? (currentWeather.conditionTe || currentWeather.condition) 
+      : (isHi ? (HI_WEATHER[currentWeather.condition] || currentWeather.condition) : currentWeather.condition);
 
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: var(--space-6);">
@@ -37,7 +56,7 @@ export function renderWeatherPage(container) {
               <div style="display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-2) 0;">
                 <span style="font-size: 3rem; font-weight: 900;">${currentWeather.temp}°C</span>
                 <span style="font-size: 1.2rem; opacity: 0.9;">
-                  ${currentWeather.icon} ${isTe ? currentWeather.conditionTe : currentWeather.condition}
+                  ${currentWeather.icon} ${conditionText}
                 </span>
               </div>
               <div style="font-size: 0.82rem; opacity: 0.85;">

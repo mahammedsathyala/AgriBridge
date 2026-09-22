@@ -4,21 +4,21 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Kurnool Agricultural Zone & Farm Perimeter",
-        "district": "Kurnool",
+        "name": "Kadapa Agricultural Zone & Farm Perimeter",
+        "district": "Kadapa (YSR District)",
         "state": "Andhra Pradesh",
         "country": "India",
         "crop": "Groundnut",
         "soil": "Red loamy soil",
-        "centroid": [78.1526, 15.8192]
+        "centroid": [78.9928, 14.7384]
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
-          [77.99469, 16.074847],
-          [77.563477, 15.683865],
-          [78.376465, 15.530437],
-          [78.675842, 15.987734]
+          [78.992772, 14.745709],
+          [78.979039, 14.736329],
+          [78.995132, 14.729979],
+          [79.004445, 14.741392]
         ]
       }
     }

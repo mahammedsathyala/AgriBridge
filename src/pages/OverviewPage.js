@@ -5,14 +5,16 @@ import { advisoryService } from '../services/advisoryService.js';
 import { showToast } from '../components/Toast.js';
 
 export function renderOverviewPage(container, { farm, weather, onNavigate }) {
-  const isTe = getLocale() === 'te';
+  const locale = getLocale();
+  const isTe = locale === 'te';
+  const isHi = locale === 'hi';
 
   container.innerHTML = `
     <!-- Demo Mode Information Strip -->
     <div class="demo-mode-strip" style="border-radius: var(--radius-md); margin-bottom: var(--space-4);">
       <div style="display: flex; align-items: center;">
         <span class="demo-mode-pill">${t('common.demoBadge')}</span>
-        <span>${isTe ? 'కర్నూలు వేరుశనగ రైతు ప్రొఫైల్ లోడ్ చేయబడింది (సత్యాల ఫార్మ్)' : 'Demo active for Sathyala Farm, Kurnool (Groundnut, 2.5 Acres)'}</span>
+        <span>${isTe ? 'కర్నూలు వేరుశనగ రైతు ప్రొఫైల్ లోడ్ చేయబడింది (సత్యాల ఫార్మ్)' : (isHi ? 'कर्नूल मूंगफली किसान प्रोफाइल लोड हो गया (सत्याला फार्म)' : 'Demo active for Sathyala Farm, Kurnool (Groundnut, 2.5 Acres)')}</span>
       </div>
       <div style="display: flex; gap: var(--space-3); align-items: center;">
         <button id="btn-start-tour" class="demo-reset-btn" style="color: #0284c7; font-weight: 700;">
@@ -37,7 +39,7 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
           </div>
           <div class="welcome-chip">
             <span>🌱</span>
-            <span>${t('overview.cropLabel')}: ${isTe ? 'వేరుశనగ (Kadiri-6)' : 'Groundnut (K6)'}</span>
+            <span>${t('overview.cropLabel')}: ${farm.crop ? `${farm.crop}${farm.cropVariety ? ` (${farm.cropVariety})` : ''}` : 'Groundnut (K6)'}</span>
           </div>
           <div class="welcome-chip">
             <span>⏳</span>

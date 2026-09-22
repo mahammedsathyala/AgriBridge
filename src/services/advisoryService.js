@@ -1,10 +1,56 @@
 import { mockAdvisories } from '../data/mockAdvisories.js';
+import { farmService } from './farmService.js';
 
 const STORAGE_KEY = 'agribridge_advisories_state';
+const API_BASE = 'http://localhost:5000';
 
 export const advisoryService = {
   async getAdvisories(filterCategory = 'all') {
     let list = [...mockAdvisories];
+
+    // Attempt live advisory fetch with farm coordinates and crop
+    try {
+      const farm = await farmService.getFarmProfile();
+      const lat = farm?.coordinates?.lat ?? 14.7384;
+      const lon = farm?.coordinates?.lng ?? 78.9928;
+      const crop = farm?.crop || "Groundnut";
+
+      const res = await fetch(`${API_BASE}/api/advisory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lon,
+          crop: crop,
+          crop_name: crop,
+          soil_type: farm?.soilType || "red_loamy",
+          location: farm?.location || "Kadapa, Andhra Pradesh"
+        }),
+        signal: AbortSignal.timeout(3500)
+      });
+
+      if (res.ok) {
+        const liveAdv = await res.json();
+        const recs = liveAdv?.rule_based_recommendations?.recommendations || liveAdv?.recommendations;
+        if (Array.isArray(recs) && recs.length > 0) {
+          const liveItems = recs.map((rec, idx) => ({
+            id: `live-adv-${idx + 1}`,
+            crop: rec.crop,
+            category: "soil",
+            urgency: "medium",
+            title: `Regenerative Practice: ${rec.crop}`,
+            description: rec.rationale || (rec.soil_regeneration_practices ? rec.soil_regeneration_practices.join('. ') : ''),
+            actionText: "Review Practice",
+            completed: false,
+            source: "AgriN Advisory Engine (Live)"
+          }));
+          list = [...liveItems, ...list];
+        }
+      }
+    } catch (e) {
+      // Graceful fallback to mock data
+    }
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -50,80 +96,132 @@ export const advisoryService = {
    * Generates safe, explainable agronomic guidance with safety disclaimers
    */
   async askAgriAI(userQuery, locale = 'en') {
-    await new Promise(res => setTimeout(res, 600));
+    let farm = null;
+    try {
+      farm = await farmService.getFarmProfile();
+    } catch (e) {}
+
+    const lat = farm?.coordinates?.lat ?? 14.7384;
+    const lon = farm?.coordinates?.lng ?? 78.9928;
+    const crop = farm?.crop || "Groundnut";
+    const locName = farm?.location || "Kadapa, Andhra Pradesh";
+
+    // Attempt backend localization / LLM route
+    try {
+      const res = await fetch(`${API_BASE}/localize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: userQuery,
+          crop_name: crop,
+          language: locale === 'te' ? 'te' : (locale === 'hi' ? 'hi' : 'en'),
+          latitude: lat,
+          longitude: lon
+        }),
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.localized_advisory) {
+          const adv = data.localized_advisory;
+          return {
+            answer: adv.actionable_guidance || adv.bulletin || adv.greeting || "Advisory guidance generated.",
+            sources: [`AgriN Localized Engine (${crop})`, `Field GPS (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`],
+            disclaimer: locale === 'hi' ? "निर्णय-सहायता सलाह। स्थानीय कृषि अधिकारी से पुष्टि करें।" : (locale === 'te' ? "సహాయక సిఫార్సు మాత్రమే." : "Decision support advisory only. Verify with local agricultural officers.")
+          };
+        }
+      }
+    } catch (e) {
+      // Fallback to local expert rules
+    }
+
+    await new Promise(res => setTimeout(res, 500));
     const q = userQuery.toLowerCase();
 
-    if (q.includes("irrigate") || q.includes("నీరు") || q.includes("water") || q.includes("pump")) {
+    if (q.includes("irrigate") || q.includes("నీరు") || q.includes("water") || q.includes("pump") || q.includes("सिंचाई") || q.includes("पानी")) {
       if (locale === 'te') {
         return {
-          answer: "ఆదివారం నాడు 18 మి.మీ వర్షం కురిసే అవకాశం (68%) ఉన్నందున, ఈ రోజు నీటిపారుదలని నిలిపివేయడం శ్రేయస్కరం. ప్రస్తుతం మీ నేల తేమ 34% వద్ద పూత దశకు అనుకూలంగా ఉంది. రేపు ఉదయం నేల పరిశీలించండి.",
-          sources: ["నేల సెన్సార్ AGRI-ESP32 (34% తేమ)", "వాతావరణ రాడార్ (18mm వర్ష సూచన)"],
+          answer: `వాతావరణ సూచన మరియు నేల తేమను పరిశీలించిన తర్వాత, ${crop} పంటకు ప్రస్తుతం నీటిపారుదలని నిలిపివేయడం శ్రేయస్కరం. రేపు ఉదయం నేల తేమను తనిఖీ చేయండి.`,
+          sources: ["నేల సెన్సార్ AGRI-ESP32 (వర్చువల్ నోడ్)", "లైవ్ వాతావరణ రాడార్"],
           disclaimer: "సహాయక సిఫార్సు మాత్రమే. క్షేత్ర పరిస్థితులను బట్టి నిర్ణయం తీసుకోండి."
         };
       }
+      if (locale === 'hi') {
+        return {
+          answer: `मौसम पूर्वानुमान और मिट्टी की नमी को देखते हुए, ${crop} फसल के लिए वर्तमान में सिंचाई 24-48 घंटों के लिए टालना बेहतर रहेगा। बारिश की संभावना के बाद कल सुबह नमी की पुनः जांच करें।`,
+          sources: ["मिट्टी सेंसर AGRI-ESP32 (वर्चुअल नोड)", "मौसम रडार"],
+          disclaimer: "निर्णय-सहायता सलाह मात्र। खेत की नमी देखकर पंप चालू करें।"
+        };
+      }
       return {
-        answer: "With an 18mm rainfall event predicted this Sunday (68% probability), it is strongly advised to delay irrigation by 24-48 hours. Your soil moisture is currently 34% VWC, which is safe for flowering groundnut. Inspect the field tomorrow before operating your pump.",
-        sources: ["Soil Sensor AGRI-ESP32 (34% VWC)", "IMD Radar Forecast (18mm rainfall)"],
+        answer: `Based on weather radar and soil telemetry, current moisture is adequate for ${crop}. Delay irrigation by 24-48 hours to conserve soil aeration.`,
+        sources: ["AGRI-ESP32 Virtual Node", "Live Meteorological Feed"],
         disclaimer: "Decision support advisory only. Verify field saturation before pumping."
       };
     }
 
-    if (q.includes("yellow") || q.includes("పసుపు") || q.includes("leaf") || q.includes("ఆకు")) {
+    if (q.includes("yellow") || q.includes("పసుపు") || q.includes("leaf") || q.includes("ఆకు") || q.includes("पीली") || q.includes("पत्ता") || q.includes("पत्तियां")) {
       if (locale === 'te') {
         return {
-          answer: "వేరుశనగ ఆకులు పసుపు రంగులోకి మారడం అనేది ప్రధానంగా రెండు కారణాల వల్ల జరగవచ్చు: 1) ఇనుము లేదా నత్రజని లోపం వల్ల వచ్చే పాలిపోయిన పసుపు రంగు, లేదా 2) ప్రారంభ తిక్క ఆకుమచ్చ వ్యాధి వల్ల మచ్చల చుట్టూ ఏర్పడే పసుపు రంగు (Chlorotic halo). ఖచ్చితమైన నిర్ధారణ కోసం 'పంట వ్యాధి నిర్ధారణ' లో ఆకు ఫోటో తీసి అప్‌లోడ్ చేయండి.",
-          sources: ["ICAR గ్రౌండ్‌నట్ డయాగ్నస్టిక్ గైడ్", "క్రాప్ డిసీజ్ నమూనా"],
+          answer: `${crop} ఆకులు పసుపు రంగులోకి మారడం అనేది పోషకాల లోపం లేదా ఆకుమచ్చ వ్యాధి ప్రారంభ లక్షణం కావచ్చు. ఖచ్చితమైన నిర్ధారణ కోసం 'పంట వ్యాధి నిర్ధారణ' లో ఆకు ఫోటో తీసి అప్‌లోడ్ చేయండి.`,
+          sources: [`ICAR ${crop} Diagnostic Key`, "క్రాప్ డిసీజ్ డేటాబేస్"],
           disclaimer: "ఏదైనా రసాయనం పిచికారీ చేసే ముందు వ్యవసాయ శాస్త్రవేత్తలతో నిర్ధారించుకోండి."
         };
       }
-      return {
-        answer: "Yellowing in groundnut foliage can indicate either early-stage Cercospora leaf spot (which displays circular yellow halos around brown lesions) or mild interveinal iron chlorosis in alkaline red-loamy soil. Please capture and upload a clear leaf photo in our Crop Diagnosis tab for instant screening.",
-        sources: ["ICAR Groundnut Diagnostic Key", "BRICS Plant Pathology Mesh"],
-        disclaimer: "Screening recommendation only. Do not apply synthetic fungicides without visual verification."
-      };
-    }
-
-    if (q.includes("regenerative") || q.includes("పునరుత్పాదక") || q.includes("mulch") || q.includes("మల్చింగ్")) {
-      if (locale === 'te') {
+      if (locale === 'hi') {
         return {
-          answer: "ఈ నెలలో మీ వేరుశనగ పొలంలో ఎండిన గడ్డి లేదా వేరుశనగ పొట్టుతో మల్చింగ్ (రక్షక పొర) వేయడం అత్యంత ఉత్తమమైన పద్ధతి. ఇది రాబోయే ఎండలకు నేల వేడిని 3-5°C తగ్గించడమే కాకుండా 15-25% నీటిని ఆదా చేస్తుంది.",
-          sources: ["APCNF సహజ వ్యవసాయ మార్గదర్శకాలు", "నేల ఉష్ణోగ్రత రీడింగ్ (29.4°C)"],
-          disclaimer: "స్థానిక వ్యవసాయ వాతావరణ మార్గదర్శకాల ప్రకారం పాటించండి."
+          answer: `${crop} की पत्तियों का पीला पड़ना पोषण की कमी (नाइट्रोजन/लोहा) या पत्ती धब्बा रोग का प्रारंभिक संकेत हो सकता है। सटीक जांच के लिए 'फसल रोग निदान' टैब में पत्ती का फोटो अपलोड करें।`,
+          sources: [`ICAR ${crop} डायग्नोस्टिक कुंजी`, "ब्रिक्स पादप रोग डेटाबेस"],
+          disclaimer: "किसी भी रासायनिक कीटनाशक के छिड़काव से पहले कृषि वैज्ञानिक से पुष्टि करें।"
         };
       }
       return {
-        answer: "This month (flowering to pegging stage), biomass mulching using dry straw or crop residue is the highest-impact regenerative practice. It lowers soil temperatures by 3-5°C, protects sensitive young pegs entering the soil, and reduces irrigation demand by 15-25%.",
-        sources: ["Andhra Pradesh Natural Farming (APCNF) Protocols", "Soil Thermistor (29.4°C)"],
+        answer: `Yellowing foliage in ${crop} may indicate nutrient deficiency or early foliar pathology. Please capture a clear leaf photo in our Crop Diagnosis tab for automated computer vision screening.`,
+        sources: [`ICAR ${crop} Diagnostic Key`, "BRICS Plant Pathology Mesh"],
+        disclaimer: "Screening recommendation only. Do not apply synthetic fungicides without verification."
+      };
+    }
+
+    if (q.includes("regenerative") || q.includes("పునరుత్పాదక") || q.includes("mulch") || q.includes("మల్చింగ్") || q.includes("मल्च") || q.includes("प्राकृतिक") || q.includes("जैविक")) {
+      if (locale === 'te') {
+        return {
+          answer: `${crop} పొలంలో పంట వ్యర్థాలతో మల్చింగ్ (రక్షక పొర) వేయడం మరియు జీవామృతం ఉపయోగించడం ద్వారా నేలలో తేమ నిల్వ సామర్థ్యం 15-25% పెరుగుతుంది.`,
+          sources: ["సహజ వ్యవసాయ మార్గదర్శకాలు", "నేల ఉష్ణోగ్రత టెలిమెట్రీ"],
+          disclaimer: "స్థానిక వ్యవసాయ వాతావరణ మార్గదర్శకాల ప్రకారం పాటించండి."
+        };
+      }
+      if (locale === 'hi') {
+        return {
+          answer: `${crop} के खेत में फसल अवशेषों से मल्चिंग (मृदा आवरण) और जीवामृत का प्रयोग मिट्टी में 15-25% अधिक नमी बनाए रखता है और खरपतवार रोकता है।`,
+          sources: ["प्राकृतिक कृषि मानक", "वर्चुअल सेंसर टेलीमेट्री"],
+          disclaimer: "स्थानीय कृषि जलवायु दिशानिर्देशों के अनुसार पालन करें।"
+        };
+      }
+      return {
+        answer: `Biomass mulching and bio-fertilizer application for ${crop} protects root systems, suppresses weeds, and reduces irrigation requirements by 15-25%.`,
+        sources: ["Regenerative Agriculture Protocols", "Virtual Sensor Telemetry"],
         disclaimer: "AgriBridge regenerative practice guidance."
       };
     }
 
-    if (q.includes("fertilizer") || q.includes("ఎరువు") || q.includes("organic") || q.includes("compost") || q.includes("సేంద్రీయ")) {
-      if (locale === 'te') {
-        return {
-          answer: "విత్తిన 40-45 రోజుల మధ్య (ఊడలు దిగే సమయం) ఎకరాకు 200 కిలోల జిప్సం వేయడం వల్ల కాయలు గుల్ల కాకుండా గట్టిపడతాయి. సేంద్రీయంగా అయితే వర్షం పడిన తర్వాత తేలికపాటి వర్మీకంపోస్ట్ లేదా జీవామృతం అందించడం వల్ల నేలలోని సూక్ష్మజీవులు చురుగ్గా పనిచేస్తాయి.",
-          sources: ["నేల ఆరోగ్య నివేదిక (కాల్షియం లోపం)", "సేంద్రీయ ఎరువుల క్యాలెండర్"],
-          disclaimer: "రసాయన మోతాదులను మీ స్థానిక మట్టి పరీక్ష నివేదిక ప్రకారం సరిచూసుకోండి."
-        };
-      }
-      return {
-        answer: "At the 40-45 days after sowing (DAS) pegging window, applying 200 kg/acre Gypsum is crucial to supply calcium for pod development. For organic inputs, top-dress 500 kg/acre vermicompost or apply Jeevamrutha through drip irrigation after light rainfall.",
-        sources: ["Soil Health Analysis (Exchangeable Ca)", "ICAR Organic Groundnut Package"],
-        disclaimer: "General agronomic guidance. Adjust rates based on formal soil testing."
-      };
-    }
-
-    // Default intelligent response
+    // Default response
     if (locale === 'te') {
       return {
-        answer: "మీ ప్రశ్న నమోదు చేయబడింది. మీ 2.5 ఎకరాల వేరుశనగ పొలం ప్రస్తుతం పూత దశలో ఉంది మరియు నేల తేమ 34% గా ఉంది. వాతావరణం, నేల మరియు ఉపగ్రహ సమాచారాన్ని సమగ్రంగా పరిశీలించి నిర్ణయాలు తీసుకోండి. అత్యవసర సలహాల కోసం సమీప వ్యవసాయ అధికారిని సంప్రదించండి.",
-        sources: ["AgriBridge AI నమూనా", "కర్నూలు క్షేత్ర డేటా"],
+        answer: `మీ ప్రశ్న నమోదు చేయబడింది. ${locName} లోని మీ ${crop} పంట క్షేత్ర పరిస్థితులు స్థిరంగా ఉన్నాయి. మరింత సమాచారం కోసం సహాయకుడిని అడగండి.`,
+        sources: ["AgriBridge AI నమూనా", locName],
         disclaimer: "ఇది నిర్ణయ సహాయక వ్యవస్థ మాత్రమే."
       };
     }
+    if (locale === 'hi') {
+      return {
+        answer: `आपका प्रश्न दर्ज किया गया है। ${locName} में आपके ${crop} खेत की स्थिति सामान्य एवं स्थिर है। अधिक विशिष्ट सलाह के लिए प्रश्न पूछें।`,
+        sources: ["AgriBridge AI मॉडल", locName],
+        disclaimer: "यह निर्णय-सहायता प्रणाली है। कृषि विस्तार अधिकारी से पुष्टि करें।"
+      };
+    }
     return {
-      answer: "Thank you for consulting AgriAI. Your 2.5-acre groundnut crop in Kurnool is currently at the flowering/pegging transition stage (Day 42). Telemetry indicates stable canopy vigor (NDVI 0.68) and adequate soil moisture (34%). Please verify critical chemical choices with your local agricultural officer.",
-      sources: ["AgriBridge Multi-Sensor Mesh", "Kurnool Field Telemetry"],
+      answer: `Thank you for consulting AgriAI. Your ${crop} plot in ${locName} is tracked. Telemetry indicates stable canopy vigor and optimal moisture balance.`,
+      sources: ["AgriBridge Multi-Sensor Mesh", locName],
       disclaimer: "Decision-support recommendation. Validate with agricultural extension officer."
     };
   }

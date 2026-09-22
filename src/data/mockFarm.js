@@ -3,10 +3,10 @@ export const defaultFarmData = {
   farmerName: "Sathyala Farmer",
   farmerId: "FMR-IN-AP-7729",
   farmName: "Sathyala Farm",
-  location: "Kurnool, Andhra Pradesh, India",
+  location: "Kadapa, Andhra Pradesh, India",
   coordinates: {
-    lat: 15.8192,
-    lng: 78.1526,
+    lat: 14.7384,
+    lng: 78.9928,
   },
   areaAcres: 2.5,
   crop: "Groundnut",
@@ -38,20 +38,20 @@ export const defaultFarmData = {
 
   // Plot polygon coordinates for visualization [lat, lng]
   boundaryPolygon: [
-    [16.074847, 77.994690],
-    [15.683865, 77.563477],
-    [15.530437, 78.376465],
-    [15.987734, 78.675842],
+    [14.745709, 78.992772],
+    [14.736329, 78.979039],
+    [14.729979, 78.995132],
+    [14.741392, 79.004445],
   ],
 
   // GeoJSON Specification
   geoJson: {
     type: "LineString",
     coordinates: [
-      [77.99469, 16.074847],
-      [77.563477, 15.683865],
-      [78.376465, 15.530437],
-      [78.675842, 15.987734]
+      [78.992772, 14.745709],
+      [78.979039, 14.736329],
+      [78.995132, 14.729979],
+      [79.004445, 14.741392]
     ]
   },
 

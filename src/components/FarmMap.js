@@ -1,12 +1,16 @@
 import { t } from '../i18n/index.js';
+import { farmService } from '../services/farmService.js';
+import { showToast } from './Toast.js';
 
-export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }) {
+export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite', onFarmUpdated }) {
   let currentZoom = zoom;
   let activeLayer = layer; // 'satellite' | 'ndvi'
+  let pinX = 255;
+  let pinY = 210;
 
   function update() {
-    const lat = farm.coordinates ? farm.coordinates.lat : 15.8281;
-    const lng = farm.coordinates ? farm.coordinates.lng : 78.0373;
+    const lat = farm.coordinates ? farm.coordinates.lat : 14.7384;
+    const lng = farm.coordinates ? farm.coordinates.lng : 78.9928;
     const scale = currentZoom;
 
     // Viewbox transformation based on zoom
@@ -24,7 +28,8 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }
               <span>${t('farm.mapTitle')}</span>
             </div>
             <div style="font-size: 0.78rem; color: var(--text-muted);">
-              ${t('farm.mapCoords')}: ${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E • Kurnool Block 4B
+              ${t('farm.mapCoords')}: ${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E • ${farm.location || 'Andhra Pradesh'}
+              <span style="font-size: 0.72rem; color: var(--color-primary-700); margin-left: 6px;">(Click map or drag pin to relocate)</span>
             </div>
           </div>
 
@@ -53,7 +58,7 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }
 
         <!-- SVG Map Viewport -->
         <div style="position: relative; width: 100%; height: 320px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-medium); background: #1c2e24;">
-          <svg viewBox="${vbX} ${vbY} ${vbWidth} ${vbHeight}" style="width: 100%; height: 100%; display: block; transition: all 0.3s ease;">
+          <svg id="farm-map-svg" viewBox="${vbX} ${vbY} ${vbWidth} ${vbHeight}" style="width: 100%; height: 100%; display: block; cursor: crosshair; user-select: none;">
             <defs>
               <!-- Satellite Terrain Pattern -->
               <linearGradient id="satGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -107,12 +112,12 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }
             <line x1="182" y1="235" x2="322" y2="225" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
             <line x1="180" y1="260" x2="320" y2="250" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
 
-            <!-- Farm Center Pin & Tag -->
-            <g transform="translate(255, 210)">
-              <circle cx="0" cy="0" r="14" fill="rgba(220, 38, 38, 0.2)" class="pulse-circle" />
+            <!-- Farm Center Pin & Tag (Draggable & Clickable) -->
+            <g id="farm-center-pin" transform="translate(${pinX}, ${pinY})" style="cursor: grab;">
+              <circle cx="0" cy="0" r="14" fill="rgba(220, 38, 38, 0.25)" class="pulse-circle" />
               <circle cx="0" cy="0" r="7" fill="#dc2626" stroke="#ffffff" stroke-width="2" />
               <path d="M 0 0 L 0 -12" stroke="#dc2626" stroke-width="2" />
-              <rect x="-42" y="-36" width="84" height="20" rx="4" fill="rgba(0,0,0,0.8)" />
+              <rect x="-42" y="-36" width="84" height="20" rx="4" fill="rgba(0,0,0,0.85)" />
               <text x="0" y="-22" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="bold">
                 ${farm.farmName || 'Sathyala Farm'}
               </text>
@@ -129,9 +134,9 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }
           </svg>
 
           <!-- Floating Map Overlay Card / Legend -->
-          <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.92); backdrop-filter: blur(4px); padding: 8px 12px; border-radius: var(--radius-md); font-size: 0.72rem; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 4px;">
+          <div id="farm-map-overlay-card" style="position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.92); backdrop-filter: blur(4px); padding: 8px 12px; border-radius: var(--radius-md); font-size: 0.72rem; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 4px; pointer-events: auto;">
             <div style="font-weight: 700; color: var(--color-primary-900);">
-              ${farm.areaAcres || 2.5} Acres Groundnut (Kadiri-6)
+              ${farm.areaAcres || 2.5} Acres ${farm.crop || 'Groundnut'}
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
               <span style="display: inline-flex; align-items: center; gap: 4px;">
@@ -147,6 +152,104 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }
         </div>
       </div>
     `;
+
+    // Map Click & Drag Handler to compute lat/lng from SVG position
+    const svgEl = container.querySelector('#farm-map-svg');
+    const pinEl = container.querySelector('#farm-center-pin');
+    let isDraggingPin = false;
+
+    async function applyCoordinateChange(svgX, svgY) {
+      pinX = Math.round(svgX);
+      pinY = Math.round(svgY);
+
+      const baseLat = farm.coordinates?.lat ?? 14.7384;
+      const baseLng = farm.coordinates?.lng ?? 78.9928;
+      const degPerPx = 0.0001; // ~10m per pixel at farm scale
+      const deltaX = svgX - 300;
+      const deltaY = svgY - 180;
+
+      const newLat = parseFloat((baseLat - (deltaY * degPerPx) / currentZoom).toFixed(6));
+      const newLng = parseFloat((baseLng + (deltaX * degPerPx) / currentZoom).toFixed(6));
+
+      try {
+        const updated = await farmService.updateFarmProfile({
+          coordinates: { lat: newLat, lng: newLng }
+        });
+        showToast(`📍 Marker updated: ${newLat.toFixed(4)}° N, ${newLng.toFixed(4)}° E`, "info");
+        if (onFarmUpdated) {
+          onFarmUpdated(updated);
+        } else {
+          farm.coordinates = { lat: newLat, lng: newLng };
+          update();
+        }
+      } catch (err) {
+        console.error("Failed to update farm marker position:", err);
+      }
+    }
+
+    if (svgEl) {
+      // Click anywhere on map to relocate pin
+      svgEl.addEventListener('click', (e) => {
+        if (e.target.closest('#farm-map-overlay-card') || e.target.closest('button')) return;
+        const rect = svgEl.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        const currentVbWidth = 600 / currentZoom;
+        const currentVbHeight = 360 / currentZoom;
+        const currentVbX = (600 - currentVbWidth) / 2;
+        const currentVbY = (360 - currentVbHeight) / 2;
+
+        const svgX = currentVbX + (clickX / rect.width) * currentVbWidth;
+        const svgY = currentVbY + (clickY / rect.height) * currentVbHeight;
+
+        applyCoordinateChange(svgX, svgY);
+      });
+
+      // Drag pin support
+      if (pinEl) {
+        pinEl.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          isDraggingPin = true;
+          pinEl.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDraggingPin) return;
+          const rect = svgEl.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+
+          const currentVbWidth = 600 / currentZoom;
+          const currentVbHeight = 360 / currentZoom;
+          const currentVbX = (600 - currentVbWidth) / 2;
+          const currentVbY = (360 - currentVbHeight) / 2;
+
+          const svgX = currentVbX + (clickX / rect.width) * currentVbWidth;
+          const svgY = currentVbY + (clickY / rect.height) * currentVbHeight;
+          pinEl.setAttribute('transform', `translate(${svgX}, ${svgY})`);
+        });
+
+        window.addEventListener('mouseup', (e) => {
+          if (!isDraggingPin) return;
+          isDraggingPin = false;
+          pinEl.style.cursor = 'grab';
+
+          const rect = svgEl.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+
+          const currentVbWidth = 600 / currentZoom;
+          const currentVbHeight = 360 / currentZoom;
+          const currentVbX = (600 - currentVbWidth) / 2;
+          const currentVbY = (360 - currentVbHeight) / 2;
+
+          const svgX = currentVbX + (clickX / rect.width) * currentVbWidth;
+          const svgY = currentVbY + (clickY / rect.height) * currentVbHeight;
+          applyCoordinateChange(svgX, svgY);
+        });
+      }
+    }
 
     // Attach map control listeners
     container.querySelector('#btn-zoom-in')?.addEventListener('click', () => {
@@ -176,3 +279,4 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite' }
 
   update();
 }
+

@@ -1,8 +1,20 @@
 import { t, getLocale } from '../i18n/index.js';
 
 export function renderWeatherPreview(container, { forecast = [] }) {
-  const isTe = getLocale() === 'te';
+  const locale = getLocale();
+  const isTe = locale === 'te';
+  const isHi = locale === 'hi';
   const fiveDay = forecast.slice(0, 5);
+
+  const HI_DAYS = {
+    'Monday': 'सोमवार', 'Mon': 'सोम',
+    'Tuesday': 'मंगलवार', 'Tue': 'मंगल',
+    'Wednesday': 'बुधवार', 'Wed': 'बुध',
+    'Thursday': 'गुरुवार', 'Thu': 'गुरु',
+    'Friday': 'शुक्रवार', 'Fri': 'शुक्र',
+    'Saturday': 'शनिवार', 'Sat': 'शनि',
+    'Sunday': 'रविवार', 'Sun': 'रवि'
+  };
 
   container.innerHTML = `
     <div class="card">
@@ -30,7 +42,7 @@ export function renderWeatherPreview(container, { forecast = [] }) {
           return `
             <div class="weather-day-card ${day.highlight ? 'highlight' : ''}">
               <div class="weather-day-title">
-                ${isTe ? (day.dayNameTe || day.dayName) : day.dayName}
+                ${isTe ? (day.dayNameTe || day.dayName) : (isHi ? (HI_DAYS[day.dayName] || day.dayName) : day.dayName)}
               </div>
               <div style="font-size: 0.72rem; color: var(--text-muted);">
                 ${isTe ? (day.dateTe || day.date) : day.date}

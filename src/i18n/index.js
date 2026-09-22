@@ -1,9 +1,17 @@
 import { en } from './en.js';
 import { te } from './te.js';
+import { hi } from './hi.js';
 
-const translations = { en, te };
+const translations = { en, te, hi };
 let currentLocale = localStorage.getItem('agribridge_locale') || 'en';
 const listeners = new Set();
+
+// Set initial typography body class
+if (currentLocale === 'te') {
+  document.body.classList.add('lang-te');
+} else if (currentLocale === 'hi') {
+  document.body.classList.add('lang-hi');
+}
 
 export function setLocale(locale) {
   if (translations[locale]) {
@@ -11,11 +19,8 @@ export function setLocale(locale) {
     localStorage.setItem('agribridge_locale', locale);
     
     // Update body classes for typography adjustments
-    if (locale === 'te') {
-      document.body.classList.add('lang-te');
-    } else {
-      document.body.classList.remove('lang-te');
-    }
+    document.body.classList.toggle('lang-te', locale === 'te');
+    document.body.classList.toggle('lang-hi', locale === 'hi');
     
     // Notify all reactive UI subscribers
     listeners.forEach(fn => fn(currentLocale));

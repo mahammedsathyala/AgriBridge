@@ -3,8 +3,8 @@ import { showToast } from './Toast.js';
 
 export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
   const currentLocale = getLocale();
-  const cropLabel = currentLocale === 'te' ? 'వేరుశనగ' : (farm.crop || 'Groundnut');
-  const locLabel = currentLocale === 'te' ? 'కర్నూలు, ఆంధ్రప్రదేశ్' : (farm.location || 'Kurnool, Andhra Pradesh');
+  const cropLabel = farm.crop ? `${farm.crop}${farm.cropVariety ? ` (${farm.cropVariety})` : ''}` : 'Groundnut (K6)';
+  const locLabel = farm.location || 'Kadapa, Andhra Pradesh';
 
   container.innerHTML = `
     <header class="app-header">
@@ -33,6 +33,9 @@ export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
         <div class="lang-selector" role="group" aria-label="Language selection">
           <button id="lang-btn-en" class="lang-btn ${currentLocale === 'en' ? 'active' : ''}">
             English
+          </button>
+          <button id="lang-btn-hi" class="lang-btn ${currentLocale === 'hi' ? 'active' : ''}">
+            हिन्दी
           </button>
           <button id="lang-btn-te" class="lang-btn ${currentLocale === 'te' ? 'active' : ''}">
             తెలుగు
@@ -64,12 +67,20 @@ export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
   }
 
   const enBtn = container.querySelector('#lang-btn-en');
+  const hiBtn = container.querySelector('#lang-btn-hi');
   const teBtn = container.querySelector('#lang-btn-te');
   
   if (enBtn) {
     enBtn.addEventListener('click', () => {
       setLocale('en');
       showToast("Language changed to English", "info");
+    });
+  }
+
+  if (hiBtn) {
+    hiBtn.addEventListener('click', () => {
+      setLocale('hi');
+      showToast("भाषा बदलकर हिन्दी कर दी गई (Switched to Hindi)", "success");
     });
   }
 
@@ -83,9 +94,12 @@ export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
   const notifBtn = container.querySelector('#btn-notifications');
   if (notifBtn) {
     notifBtn.addEventListener('click', () => {
-      const msg = currentLocale === 'te' 
-        ? "వర్ష సూచన: ఆదివారం నాడు 18 మి.మీ వర్షం కురిసే అవకాశం ఉంది. నీరు పెట్టవద్దు."
-        : "Weather Alert: 18mm rainfall expected on Sunday. Delay irrigation.";
+      let msg = "Weather Alert: 18mm rainfall expected on Sunday. Delay irrigation.";
+      if (currentLocale === 'te') {
+        msg = "వర్ష సూచన: ఆదివారం నాడు 18 మి.మీ వర్షం కురిసే అవకాశం ఉంది. నీరు పెట్టవద్దు.";
+      } else if (currentLocale === 'hi') {
+        msg = "मौसम चेतावनी: रविवार को 18 मिमी वर्षा की संभावना है। सिंचाई स्थगित करें।";
+      }
       showToast(msg, "warning", 5000);
     });
   }

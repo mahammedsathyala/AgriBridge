@@ -34,7 +34,12 @@ export function renderDiagnosisView(container) {
   }
 
   function render() {
-    const isTe = getLocale() === 'te';
+    const locale = getLocale();
+    const isTe = locale === 'te';
+    const isHi = locale === 'hi';
+
+    const HI_CROPS = { 'Groundnut': 'मूंगफली', 'Pearl Millet': 'बाजरा', 'Pigeon Pea': 'अरहर', 'Sorghum': 'ज्वार', 'Chickpea': 'चना' };
+    const HI_STATUS = { 'Treatment Advised': 'उपचार की सलाह दी गई', 'Resolved': 'समाधान हो गया', 'Monitoring': 'निगरानी जारी' };
 
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: var(--space-6);">
@@ -117,7 +122,7 @@ export function renderDiagnosisView(container) {
                       ${t('diagnosis.resultTitle')}
                     </div>
                     <div class="diagnosis-condition-name">
-                      ${isTe ? diagnosisResult.conditionTe : diagnosisResult.conditionEn}
+                      ${isTe ? diagnosisResult.conditionTe : (isHi ? (diagnosisResult.conditionHi || 'टिक्का पत्ती धब्बा रोग (Early Leaf Spot)') : diagnosisResult.conditionEn)}
                     </div>
                     <div style="font-size: 0.78rem; font-style: italic; color: var(--text-muted);">
                       Pathogen: ${diagnosisResult.pathogen}
@@ -129,7 +134,7 @@ export function renderDiagnosisView(container) {
                       ${diagnosisResult.confidencePercent}% ${t('diagnosis.confidenceLabel')}
                     </div>
                     <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
-                      ${isTe ? diagnosisResult.severityLevelTe : diagnosisResult.severityLevel}
+                      ${isTe ? diagnosisResult.severityLevelTe : (isHi ? (diagnosisResult.severityLevelHi || 'मध्यम गंभीरता (चरण 2)') : diagnosisResult.severityLevel)}
                     </div>
                   </div>
                 </div>
@@ -141,7 +146,7 @@ export function renderDiagnosisView(container) {
 
                 <!-- Affected Canopy Area -->
                 <div style="font-size: 0.85rem; color: var(--text-primary); margin: var(--space-3) 0;">
-                  <strong>🌱 ${t('diagnosis.affectedLabel')}:</strong> ${isTe ? diagnosisResult.affectedCanopyTe : diagnosisResult.affectedCanopy}
+                  <strong>🌱 ${t('diagnosis.affectedLabel')}:</strong> ${isTe ? diagnosisResult.affectedCanopyTe : (isHi ? (diagnosisResult.affectedCanopyHi || 'निचली पत्तियों का 8-12% हिस्सा प्रभावित') : diagnosisResult.affectedCanopy)}
                 </div>
 
                 <!-- Symptoms Detected -->
@@ -150,7 +155,11 @@ export function renderDiagnosisView(container) {
                     📋 ${t('diagnosis.symptomsTitle')}
                   </div>
                   <ul class="symptoms-checklist">
-                    ${(isTe ? diagnosisResult.symptomsTe : diagnosisResult.symptomsEn).map(s => `
+                    ${(isTe ? diagnosisResult.symptomsTe : (isHi ? (diagnosisResult.symptomsHi || [
+                      'निचली पत्तियों पर गोल, गहरे भूरे से काले धब्बे',
+                      'धब्बों के चारों ओर स्पष्ट पीला घेरा (हेलो) दिखाई देना',
+                      'समय से पहले पत्तियों का पीला पड़ना और गिरना'
+                    ]) : diagnosisResult.symptomsEn)).map(s => `
                       <li class="symptom-item">
                         <span style="color: var(--color-amber-600); font-weight: bold;">•</span>
                         <span>${s}</span>
@@ -165,17 +174,22 @@ export function renderDiagnosisView(container) {
                     ⚡ ${t('diagnosis.immediateActionTitle')}
                   </div>
                   <div style="font-size: 0.82rem; line-height: 1.4; color: var(--color-primary-900);">
-                    ${isTe ? diagnosisResult.immediateActionTe : diagnosisResult.immediateActionEn}
+                    ${isTe ? diagnosisResult.immediateActionTe : (isHi ? (diagnosisResult.immediateActionHi || 'ट्राइकोडर्मा हरजिएनम (5 ग्राम/लीटर) या 5% नीम के बीज के अर्क (NSKE) का छिड़काव करें। सिंचाई 24 घंटे टालें।') : diagnosisResult.immediateActionEn)}
                   </div>
                 </div>
 
                 <!-- Prevention -->
                 <div style="margin-bottom: var(--space-3);">
-                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--color-primary-900); margin-bottom: 4px;">
+                  <div style="font-weight: 700; font-size: 0.88rem; color: var(--color-primary-900); margin-bottom: 4px;">
                     🛡️ ${t('diagnosis.preventionTitle')}
                   </div>
                   <ul style="font-size: 0.8rem; padding-left: 18px; color: var(--text-secondary); line-height: 1.4;">
-                    ${(isTe ? diagnosisResult.preventionPracticesTe : diagnosisResult.preventionPracticesEn).map(p => `
+                    ${(isTe ? diagnosisResult.preventionPracticesTe : (isHi ? (diagnosisResult.preventionPracticesHi || [
+                      'फसल चक्र: गैर-दलहनी फसलों (जैसे ज्वार या बाजरा) के साथ चक्रण करें',
+                      'खेत की स्वच्छता: पिछली फसल के संक्रमित अवशेषों को नष्ट करें',
+                      'प्रतिरोधी किस्में: प्रमाणित बीज (कदिरी-6, कदिरी-9) का उपयोग करें',
+                      'जल निकास: खेत में जलभराव न होने दें'
+                    ]) : diagnosisResult.preventionPracticesEn)).map(p => `
                       <li>${p}</li>
                     `).join('')}
                   </ul>
@@ -231,15 +245,15 @@ export function renderDiagnosisView(container) {
                 ${historyList.map(h => `
                   <tr style="border-bottom: 1px solid var(--border-subtle);">
                     <td style="padding: 10px; font-weight: 600;">${h.date}</td>
-                    <td style="padding: 10px;">${isTe ? (h.cropTe || h.crop) : h.crop}</td>
+                    <td style="padding: 10px;">${isTe ? (h.cropTe || h.crop) : (isHi ? (HI_CROPS[h.crop] || h.crop) : h.crop)}</td>
                     <td style="padding: 10px; font-weight: 700; color: var(--color-primary-900);">
-                      ${isTe ? (h.diagnosisTe || h.diagnosis) : h.diagnosis}
+                      ${isTe ? (h.diagnosisTe || h.diagnosis) : (isHi ? (h.diagnosisHi || (h.diagnosis?.includes('Tikka') || h.diagnosis?.includes('Leaf Spot') ? 'टिक्का पत्ती धब्बा रोग' : h.diagnosis)) : h.diagnosis)}
                     </td>
                     <td style="padding: 10px;">
                       <span class="badge badge-warning">${h.confidence}</span>
                     </td>
                     <td style="padding: 10px;">
-                      <span class="badge badge-primary">${isTe ? (h.statusTe || h.status) : h.status}</span>
+                      <span class="badge badge-primary">${isTe ? (h.statusTe || h.status) : (isHi ? (HI_STATUS[h.status] || h.status) : h.status)}</span>
                     </td>
                   </tr>
                 `).join('')}

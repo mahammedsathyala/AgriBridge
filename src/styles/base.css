@@ -26,6 +26,10 @@ body.lang-te {
   font-family: var(--font-telugu);
 }
 
+body.lang-hi {
+  font-family: var(--font-hindi);
+}
+
 /* Accessibility Focus States */
 :focus-visible {
   outline: 2px solid var(--color-primary-600);
