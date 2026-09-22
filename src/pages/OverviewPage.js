@@ -247,12 +247,12 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
             </div>
           </div>
           <div class="metric-value-row">
-            <span class="metric-value">${farm.cropHealthScore || 78}</span>
+            <span class="metric-value">${currentFarm.cropHealthScore || 78}</span>
             <span class="metric-unit">/ 100</span>
             <span class="badge badge-success" style="margin-left: auto;">${t('overview.good')}</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill" style="width: ${farm.cropHealthScore || 78}%; background-color: var(--color-primary-600);"></div>
+            <div class="progress-bar-fill" style="width: ${currentFarm.cropHealthScore || 78}%; background-color: var(--color-primary-600);"></div>
           </div>
         </div>
         <div class="metric-footer">
@@ -270,11 +270,11 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
             </div>
           </div>
           <div class="metric-value-row">
-            <span class="metric-value">${farm.soilMoisturePercent || 34}%</span>
+            <span class="metric-value">${currentFarm.soilMoisturePercent || 34}%</span>
             <span class="badge badge-warning" style="margin-left: auto;">${t('overview.attentionNeeded')}</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill" style="width: ${farm.soilMoisturePercent || 34}%; background-color: var(--color-amber-500);"></div>
+            <div class="progress-bar-fill" style="width: ${currentFarm.soilMoisturePercent || 34}%; background-color: var(--color-amber-500);"></div>
           </div>
         </div>
         <div class="metric-footer">
@@ -292,7 +292,7 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
             </div>
           </div>
           <div class="metric-value-row">
-            <span class="metric-value">${farm.rainfallForecastMm || 18}</span>
+            <span class="metric-value">${currentFarm.rainfallForecastMm || 18}</span>
             <span class="metric-unit">mm</span>
             <span class="badge badge-sky" style="margin-left: auto;">Next 3 Days</span>
           </div>
@@ -421,14 +421,14 @@ export function renderOverviewPage(container, { farm, weather, onNavigate }) {
     const chartWrapper = container.querySelector('#health-chart-wrapper');
     if (chartWrapper) {
       renderCropHealthChart(chartWrapper, { 
-        telemetryData: sensorHistory.history || currentWeather.history14Days || weather.history14Days,
+        telemetryData: sensorHistory.history || currentWeather?.history14Days || weather?.history14Days || [],
         sourceStatus: sensorHistory.sourceStatus || 'DEMO'
       });
     }
 
     const weatherWrapper = container.querySelector('#weather-preview-wrapper');
-    if (weatherWrapper && (currentWeather.forecast || weather.forecast)) {
-      renderWeatherPreview(weatherWrapper, { forecast: currentWeather.forecast || weather.forecast });
+    if (weatherWrapper && (currentWeather?.forecast || weather?.forecast)) {
+      renderWeatherPreview(weatherWrapper, { forecast: currentWeather?.forecast || weather?.forecast });
     }
 
     // Attach button events

@@ -18,13 +18,18 @@
 │                       AgriBridge Local Edge Engine                          │
 │                                                                             │
 │  ┌─────────────────────────┐             ┌───────────────────────────────┐  │
-│  │ Farm Profile & State    │             │ Bilingual i18n System         │  │
-│  │ (localStorage / IndexedDB)│           │ (English & Telugu)            │  │
+│  │ Farm Profile & State    │             │ Trilingual i18n System        │  │
+│  │ (localStorage / SQLite) │             │ (English, Telugu, Hindi)      │  │
 │  └─────────────────────────┘             └───────────────────────────────┘  │
 │                                                                             │
 │  ┌─────────────────────────┐             ┌───────────────────────────────┐  │
-│  │ Computer Vision Screener│             │ Explainable Agro-AI Advisor   │  │
-│  │ (Cercospora Leaf Spot)  │             │ (Multi-Source Decision Logic) │  │
+│  │ MobileNetV2 Vision      │             │ Explainable Agro-AI Advisor   │  │
+│  │ (5-Class Pathology CV)  │             │ (Multi-Source Decision Logic) │  │
+│  └─────────────────────────┘             └───────────────────────────────┘  │
+│                                                                             │
+│  ┌─────────────────────────┐             ┌───────────────────────────────┐  │
+│  │ Agronomic Chart Box     │             │ "Ask Me" Crop AI Engine       │  │
+│  │ (Multi-Metric Telemetry)│             │ (Multi-Crop Stage Calibrated) │  │
 │  └─────────────────────────┘             └───────────────────────────────┘  │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │
@@ -42,7 +47,76 @@
 
 ---
 
-## 3. Data Schemas & TypeScript Interfaces
+## 3. Frontend Component Architecture
+
+AgriBridge uses a component-based Vanilla ES6+ modular design pattern with zero compilation overhead:
+
+```
+src/
+├── app.js                          # SPA Controller, routing, reactive state store
+├── pages/
+│   ├── OverviewPage.js             # Live dashboard, clock, KPI cards, CropHealthChart
+│   ├── MyFarmPage.js               # Boundary visualizer, IoT node sync, profile editor
+│   ├── AdvisoryPage.js             # Advisory hub: Chart Box, Ask Me Crop AI, ChatBot, Cards
+│   ├── WeatherPage.js              # Doppler forecast, agro-climatic alerts, rain trend chart
+│   └── SettingsPage.js             # Low-bandwidth switch, language, privacy, API keys
+│
+└── components/
+    ├── Header.js                   # Navigation bar, quick telemetry badges, language switcher
+    ├── Sidebar.js                  # Desktop navigational sidebar with active tab tracking
+    ├── MobileNav.js                # One-thumb mobile bottom navigation bar
+    ├── AdvisoryChartBox.js         # Interactive telemetry trends (Moisture, Health, Pests, NPK)
+    ├── AskMeCropSection.js         # Dedicated Crop AI Q&A (Multi-Crop, Stage, Voice, Dosage)
+    ├── ChatBot.js                  # "Ask AgriAI" conversational assistant with disease progression
+    ├── AdvisoryCard.js             # Categorized actionable advisory cards with WhatsApp share
+    ├── CropHealthChart.js          # SVG line chart for crop vigor, soil moisture & thermal stress
+    ├── DiagnosisView.js            # MobileNetV2 leaf image dropzone, neural scan & remedies
+    ├── RegenerativeView.js         # Regenerative practices planner with dynamic score gauge
+    ├── FarmMap.js                  # Kurnool SVG farm boundary with NDVI overlay
+    ├── NetworkGraph.js             # BRICS data cooperation topology & CADS simulator
+    └── Toast.js                    # Non-blocking reactive notifications
+```
+
+---
+
+## 4. "Ask Me" & Agronomic Advisory Intelligence Pipeline
+
+The AI Advisory architecture operates a 3-tier intelligent processing pipeline:
+
+```
+[ User Input (Text or Voice) ]
+              │
+              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. Crop Context Resolution & Normalization                                  │
+│    - Active Crop (Groundnut, Cotton, Chilli, Paddy, Tomato, Maize, etc.)   │
+│    - Phenological Stage (Sowing, Vegetative, Flowering/Pegging, Pod/Fruit) │
+│    - Soil & Weather Context (Moisture %, Canopy Temp °C, Rain Forecast mm) │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. Dual-Engine Advisory Evaluation                                          │
+│    ├─ Primary: Live Anthropic Claude 3.5 Sonnet (via Flask API /localizations)│
+│    └─ Resilient Edge: Regional ICAR / ANGRAU Knowledge Base Engine          │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. Structured Explainable Response Card Generation                          │
+│    - 🔎 Diagnostic Observation (Canopy & Soil State)                        │
+│    - 💡 Specific Recommendation & Organic/Chemical Remedies                 │
+│    - 🧪 Dosage Matrix Table (Product Name & Application Rate per Liter/Acre)│
+│    - ⚠️ Key Risk & Weather Precautions (Wash-off, Phytotoxicity, Resistance)│
+│    - 📅 Immediate Action Checklist                                          │
+│    - 🔊 Web Speech API Vernacular Voice Playback (Telugu, Hindi, English)  │
+│    - 📤 One-Click Share with Agricultural Extension Officer (WhatsApp)      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Data Schemas & TypeScript Interfaces
 
 ### Farm & Sensor Model
 ```typescript
@@ -81,25 +155,32 @@ interface SensorTelemetry {
 }
 ```
 
-### Advisory Model
+### Crop-Specific Advisory Query Model (`AskMeCropSection`)
 ```typescript
-interface AgroAdvisory {
-  id: string;
-  isPriority: boolean;
-  titleEn: string;
-  titleTe: string;
-  category: 'irrigation' | 'fertilizer' | 'pest' | 'weather' | 'soil' | 'regenerative' | 'harvest';
-  priority: 'low' | 'medium' | 'high';
-  date: string;
-  completed: boolean;
-  confidence: number;
-  reasonEn: string;
-  reasonTe: string;
-  actionEn: string;
-  actionTe: string;
-  benefitEn: string;
-  benefitTe: string;
-  sources: Array<{ name: string; val: string }>;
+interface CropAdvisoryQuery {
+  cropId: 'groundnut' | 'cotton' | 'chilli' | 'rice' | 'tomato' | 'maize' | 'pulses' | 'mango';
+  variety: string;
+  growthStage: string;
+  farmerQuestion: string;
+  locale: 'en' | 'te' | 'hi';
+  telemetryContext: {
+    soilMoisturePercent: number;
+    canopyTempC: number;
+    rainfallOutlookMm: number;
+  };
+}
+
+interface CropAdvisoryResponse {
+  cropId: string;
+  variety: string;
+  stageName: string;
+  observation: string;
+  recommendation: string;
+  dosageDetails: Array<{ item: string; dose: string }>;
+  riskAlert: string;
+  actionSteps: string[];
+  knowledgeSource: string;
+  timestamp: string;
 }
 ```
 
@@ -129,6 +210,7 @@ interface AgroAdvisory {
   "payload": {
     "data_indicator": "Crop Health & Soil Moisture Telemetry",
     "crop": "groundnut",
+    "variety": "Kadiri-6",
     "growth_stage": "flowering",
     "soil_moisture_percent": 34,
     "rainfall_forecast_mm": 18,
@@ -144,28 +226,30 @@ interface AgroAdvisory {
 
 ---
 
-## 4. API Endpoints Specification
+## 6. API Endpoints Specification
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/farms` | List registered smallholder farms |
-| `GET` | `/api/farms/:id` | Get telemetry and profile for specific farm |
-| `PUT` | `/api/farms/:id` | Update farm details (crop, area, irrigation) |
-| `GET` | `/api/weather/:farmId` | Get 7-day Doppler forecast & climate alerts |
-| `GET` | `/api/soil/:farmId` | Get real-time ESP32 soil moisture & thermistor data |
-| `GET` | `/api/satellite/:farmId` | Get Sentinel-2 NDVI/EVI multispectral indices |
-| `GET` | `/api/advisories/:farmId` | Get localized agro-advisories |
-| `POST` | `/api/advisories/:id/complete` | Toggle advisory completion status |
-| `POST` | `/api/diagnosis` | Upload leaf image for neural disease screening |
-| `GET` | `/api/diagnosis/history` | Retrieve historical crop health diagnostic scans |
-| `POST` | `/api/regenerative-practices` | Update farm regenerative practices & roadmap |
-| `POST` | `/api/interoperability/exchange` | Trigger cross-border BRICS data transmission |
+| `GET` | `/api/v1/health` | Backend service health check |
+| `GET` | `/api/v1/farm` | Retrieve farm profile and live IoT node data |
+| `PUT` | `/api/v1/farm` | Update farm details (crop, variety, area, growth stage) |
+| `GET` | `/api/v1/weather` | 7-day meteorological forecast and agro-climatic alerts |
+| `GET` | `/api/v1/sensors/telemetry` | Time-series ESP32 soil moisture & temperature history |
+| `POST` | `/api/v1/advisories` | Generate localized rule-based and AI advisories |
+| `GET` | `/api/v1/advisories/history` | Historical advisory actions & completion logs |
+| `POST` | `/api/v1/advisories/complete` | Toggle advisory completion status |
+| `POST` | `/api/v1/localizations` | LLM vernacular query translation & advisory generation |
+| `POST` | `/api/v1/diagnoses` | Deep Learning MobileNetV2 crop disease photo screening |
+| `GET` | `/api/v1/diagnoses/history` | Historical disease diagnostic evaluations |
+| `GET` | `/api/v1/regenerative/assessment` | Farm regenerative score and practice impact matrix |
+| `POST` | `/api/v1/interop/exchange` | Trigger cross-border BRICS CADS data exchange |
 
 ---
 
-## 5. Security & Privacy Principles
+## 7. Security & Privacy Principles
 
 1. **Zero Personal Identifiers in Cross-Border Mesh**: Personal names, phone numbers, and precise residential locations are stripped at the local adapter layer.
 2. **Geo-Fuzzing**: Plot coordinates transmitted in data-exchange simulations are fuzzed to a 2.5 km quadrant to protect farmer land privacy.
 3. **Opt-in Sharing**: All external telemetry contributions require explicit opt-in in the Settings panel.
 4. **Safety Disclaimers**: All AI advisories are explicitly marked as decision-support suggestions, discouraging hazardous pesticide misuse and recommending verification with agricultural extension officers.
+5. **Offline Fallback Architecture**: If backend servers or internet connections are interrupted, edge heuristic rules and stored local storage caches ensure farmers retain continuous access to critical guidance.

@@ -31,7 +31,7 @@ Initially piloted for smallholder groundnut farming in **Kurnool, Andhra Pradesh
 - 🗣️ **Language and digital literacy barriers** that exclude rural farmers from modern digital tools.
 - 🌐 **Siloed agricultural research** between emerging economies facing identical climate challenges.
 
-AgriBridge delivers a zero-build-step, mobile-first Web application connected to the **AgriN Python Flask intelligent backend**—integrating satellite remote sensing, SoilGrids 250m soil chemistry, live IoT sensor telemetry, **trained MobileNetV2 deep learning Groundnut disease diagnosis**, and **vernacular generative AI advisory (Anthropic Claude 3.5 Sonnet)**.
+AgriBridge delivers a zero-build-step, mobile-first Web application connected to the **AgriN Python Flask intelligent backend**—integrating satellite remote sensing, SoilGrids 250m soil chemistry, live IoT sensor telemetry, **trained MobileNetV2 deep learning Groundnut disease diagnosis**, **interactive agronomic predictive trend charts**, **dedicated multi-crop "Ask Me" AI advisory**, and **vernacular generative AI (Anthropic Claude 3.5 Sonnet)**.
 
 ---
 
@@ -44,6 +44,7 @@ AgriBridge operates on a dual-tier modular architecture designed for offline res
 │                             EDGE / FARMER TIER (Web SPA)                         │
 │  - Vanilla ES6+ Browser Native (Zero Build Step)    - Responsive Layout & PWA    │
 │  - Trilingual i18n (English, Telugu తెలుగు, Hindi हिंदी)  - Low-Bandwidth Mode (2G/3G) │
+│  - "Ask Me" Multi-Crop AI Section (Voice & Audio)  - Interactive SVG Chart Box   │
 │  - Deep Learning Model Badge & Confidence Warnings - Dynamic Regenerative Gauge │
 └────────────────────────────────────────┬─────────────────────────────────────────┘
                                          │ REST / JSON (or Mock Fallback)
@@ -85,7 +86,7 @@ AgriBridge includes a **trained Deep Convolutional Neural Network** model utiliz
 | **`late leaf spot`** | Tikka Late Leaf Spot (*Phaeoisariopsis personata*) | 482 | 103 | 104 | **689** |
 | **`nutrition deficiency`**| Nutritional Chlorosis (Fe / Zn / N Deficiency) | 230 | 50 | 49 | **329** |
 | **`rust`** | Groundnut Leaf Rust (*Puccinia arachidis*) | 159 | 33 | 34 | **226** |
-| **Total** | | **2,140** | **459** | **459** | **3,058** |
+| **`Total`** | | **2,140** | **459** | **459** | **3,058** |
 
 ### 2. Model Performance on Untouched Test Set
 Evaluated strictly on the held-out 459 test images (no data leakage):
@@ -128,8 +129,6 @@ Farmer-Friendly Vernacular Guidance
 4. **Prevention & Monitoring:** Crop rotation, row spacing, and companion intercropping.
 5. **When to Consult an Expert:** Escalation criteria for Mandal Agricultural Officers / KVK scientists.
 
-*Guardrail:* Claude is explicitly prohibited by system prompt from altering or contradicting the ML classification.
-
 ---
 
 ## ✨ Core Features & Platform Capabilities
@@ -144,56 +143,47 @@ Farmer-Friendly Vernacular Guidance
 - **Interactive 14-Day Health Chart**: Multi-series SVG line chart tracking Crop Health score, Soil Moisture percentage, and Temperature Stress (°C) with selectable 7-day, 14-day, and 30-day timeframes.
 - **Priority Action Card**: Instant recommendations (e.g., deferring drip irrigation ahead of convective rainfall).
 
-### 2. 🗺️ Interactive Farm Boundary & IoT Telemetry
+### 2. 📈 AI Agronomic Analytics & Predictive Trends Chart Box
+- **Multi-Metric Telemetry Streams**:
+  - 💧 **Soil Moisture & Irrigation Thresholds**: Displays optimal moisture bands (30-45%) and rainfall markers.
+  - 🌿 **Crop Health & Stress Index**: Compares satellite NDVI vigor vs canopy thermal stress (°C).
+  - 🐛 **Pest & Disease Risk Forecast**: Tracks *Cercospora* (Tikka), Leaf Miner, and Rust infection probabilities.
+  - 🧪 **Nutrients & Gypsum Balance**: Tracks NPK depletion and gypsum demand windows (40-45 DAS).
+- **Interactive Time Horizons**: 7 Days, 14 Days, and 30 Days trend forecasting.
+- **Live Tooltip Hover Inspection**: Inspect individual telemetry points with detailed status readouts.
+- **Actionable AI Insight Callouts**: Dynamic recommendations updated per selected metric.
+
+### 3. 🌾 Dedicated "Ask Me" — Crop-Specific AI Advisor
+- **Multi-Crop Regional Catalog**: Select from **Groundnut (వేరుశనగ)**, **Cotton (పత్తి)**, **Chilli (మిరప)**, **Rice/Paddy (వరి)**, **Tomato (టమాటా)**, **Maize (మొక్కజొన్న)**, **Red Gram (కంది)**, and **Mango (మామిడి)**.
+- **Variety & Phenological Stage Calibration**: Tailors guidance according to crop variety (e.g., Kadiri-6, Teja, BPT-5204) and active growth stages (Sowing, Vegetative, Flowering, Pod/Boll formation).
+- **1-Click Popular Questions**: Instant prompts covering disease remedies, fertilizer dosing, and irrigation timing.
+- **Speech Recognition (Voice Mic 🎙️)**: Speak queries in Telugu, Hindi, or English.
+- **Rich Agronomic Response Cards**:
+  - 🔎 **AI Diagnostic Observations**: In-depth condition analysis.
+  - 💡 **Specific Recommendations & Remedies**: Organic/chemical treatments.
+  - 🧪 **Dosage Matrix Table**: Clear application quantities per liter / per acre.
+  - ⚠️ **Key Risk & Weather Cautions**: Wash-off and resistance prevention.
+  - 📅 **Immediate Action Checklist**: Step-by-step field tasks.
+  - 🔊 **Voice Audio Player ("Listen / వినండి / सुनें")**: Speech synthesis readout.
+  - 📤 **One-Click Share**: Export formatted advisories directly to WhatsApp or extension officers.
+
+### 4. 🗺️ Interactive Farm Boundary & IoT Telemetry
 - **Kurnool Farm Boundary**: Custom GeoJSON polygon rendering for **Sathyala Farm** (15.8281° N, 78.0373° E, 2.5 acres).
-- **Dual Layer Visualization**: One-click toggling between **TrueColor Satellite Base** and **NDVI (Normalized Difference Vegetation Index)** canopy health overlays.
-- **Live IoT Sensor Node (`AGRI-ESP32-001`)**:
-  - Real-time telemetry monitoring: Node status (Online), battery health (86%), soil moisture (34%), canopy temperature (31.4°C), and ambient humidity (68%).
-  - **Simulated Sensor Sync**: Interactive "Sync Now" trigger that fetches live sensor pings and updates telemetry metrics.
-- **In-Browser Farm Details Editor**: Full profile editing modal with immediate `localStorage` state persistence.
+- **Dual Layer Visualization**: One-click toggling between **TrueColor Satellite Base** and **NDVI** canopy health overlays.
+- **Live IoT Sensor Node (`AGRI-ESP32-001`)**: Real-time telemetry monitoring with simulated sync trigger.
 
-### 3. 🔬 AI Crop Disease Diagnosis (Computer Vision)
-- **Multi-Format Upload**: Drag-and-drop file upload, file browser, or instant sample image loader.
-- **Sample Leaf Inspection**: Pre-loaded authentic groundnut leaf exhibiting early-stage *Cercospora* (Tikka) leaf spot.
-- **Neural Scanning Animation**: Real-time scanning overlay with deep learning classification badge (`⚡ Groundnut Deep Learning (MobileNetV2)`).
-- **Detailed Agronomic Diagnostics**:
-  - **Pathology**: Early Leaf Spot, Late Leaf Spot, Rust, Nutrition Deficiency, or Healthy Foliage.
-  - **Confidence**: Model certainty meter with low-confidence safety alerts.
-  - **Organic Biological Remedies**: 5% Neem Seed Kernel Extract (NSKE), *Trichoderma viride* foliar spray, fermented buttermilk solution.
-  - **Scan History Log**: Historical record of previous diagnostic evaluations.
+### 5. 🔬 AI Crop Disease Diagnosis (Computer Vision)
+- **Multi-Format Upload**: Drag-and-drop file upload, camera upload, or sample image loader.
+- **Deep Learning Classification**: Powered by MobileNetV2 with low-confidence uncertainty guardrails.
+- **Comprehensive Biological Remedies**: Organic recipes and non-chemical pest management.
 
-### 4. 🌿 Regenerative Farming Planner
+### 6. 🌿 Regenerative Farming Planner
 - **Dynamic Regenerative Score Gauge**: Visual SVG arc tracking the farm's ecological score from baseline **62/100** toward an **80/100+** target.
-- **Targeted Groundnut Interventions**:
-  - **Biomass Mulching**: Groundnut crop residue retention to reduce soil evaporative loss by 40%.
-  - **Companion Intercropping**: 6:1 ratio of Groundnut to Pigeon Pea (*Cajanus cajan*) for biological nitrogen fixation.
-  - **Crop Rotation**: Sorghum / Pearl Millet break-crop cycles to disrupt nematode and fungal pathogens.
-  - **Soil Inoculation**: Vermicompost + *Rhizobium* seed treatment.
-  - **Biological Pest Management**: Yellow sticky traps, bird perches, and border trap crops (Castor/Sunflower).
-- **Interactive Action Buttons**: Farmers can dynamically toggle practices into their active farm plan, instantly recalculating the composite regenerative score.
+- **Targeted Practices**: Biomass mulching, companion intercropping (6:1), crop rotation, and bio-inoculation.
 
-### 5. 🤖 "Ask AgriAI" Conversational Assistant
-- **Context-Aware Agro-Chat**: Interactive chat interface pre-seeded with Kurnool weather, soil, IoT, and ML disease telemetry.
-- **Instant Quick Questions**: One-click queries for irrigation schedules, organic pesticide recipes, and fertilizer timing.
-- **Safety Disclaimers**: Strict guardrails advising laboratory verification for critical synthetic chemical inputs.
-
-### 6. 🌐 BRICS Agricultural Data Interoperability Network
-- **Interactive SVG Topology Graph**: Visual mesh connecting nodes in **India (ICAR / AgriBridge)**, **Brazil (EMBRAPA)**, **Russia (VASHNIL)**, **China (CAAS)**, and **South Africa (ARC)**.
-- **Animated Data Packets**: Live visual pulses illustrating bilateral data flows across the network.
-- **National Adapter Cards**: Detailed profiles for all 5 partner organizations, their data infrastructure, and active research programs.
-- **Live CADS Transmission Simulator**: Simulates exporting standardized, anonymized JSON payloads conforming to the **Common Agricultural Data Schema (CADS)** with complete farmer PII stripping.
-
-### 7. 🗣️ Full Multilingual Support (i18n)
-- Native language support for:
-  - 🇬🇧 **English (`en`)**
-  - 🇮🇳 **Telugu (`te` — తెలుగు)**: Tailored for Andhra Pradesh & Telangana groundnut farmers.
-  - 🇮🇳 **Hindi (`hi` — हिंदी)**: Accessible for smallholders across northern and central agricultural belts.
-- Instant, reactive language switching without page reloads.
-
-### 8. 📶 Low-Bandwidth & Rural Device Optimization
-- **Low-Bandwidth Mode Toggle**: Strips high-frequency animations, lowers canvas overhead, and minimizes payload sizes for 2G/EDGE networks.
-- **Mobile-First Bottom Navigation**: Optimized for one-thumb navigation on sub-$100 Android smartphones.
-- **Local Caching**: Advisories and farm records persist in `localStorage` for offline access during network blackouts.
+### 7. 🌐 BRICS Agricultural Data Interoperability Network
+- **Interactive SVG Topology Graph**: Real-time mesh connecting India, Brazil, Russia, China, and South Africa.
+- **Live CADS Transmission Simulator**: Exports standardized, anonymized JSON conforming to CADS v1.4 with zero farmer PII.
 
 ---
 
@@ -235,6 +225,10 @@ AgriBridge/
 │   │   └── bricsService.js                    # CADS cross-border data exchange simulator
 │   └── components/
 │       ├── Header.js                          # Global header with location, language, and low-BW switch
+│       ├── Sidebar.js                         # Desktop navigational sidebar with active tab tracking
+│       ├── MobileNav.js                       # Mobile bottom navigation bar
+│       ├── AdvisoryChartBox.js                # Interactive telemetry trends (Moisture, Health, Pests, NPK)
+│       ├── AskMeCropSection.js                # Dedicated Crop AI Q&A (Multi-Crop, Stage, Voice, Dosage)
 │       ├── FarmMap.js                         # Interactive SVG boundary visualizer & layer toggles
 │       ├── CropHealthChart.js                 # Multi-series SVG telemetry line chart
 │       ├── WeatherCard.js                     # Forecast cards with rainfall & irrigation advice
@@ -242,7 +236,8 @@ AgriBridge/
 │       ├── ChatBot.js                         # "Ask AgriAI" interactive assistant
 │       ├── DiagnosisView.js                   # Photo dropzone, MobileNetV2 badge, remedies & warnings
 │       ├── RegenerativeView.js                # Practice checklist and dynamic score gauge
-│       └── NetworkGraph.js                    # Animated BRICS topology graph & CADS exchange
+│       ├── NetworkGraph.js                    # Animated BRICS topology graph & CADS exchange
+│       └── Toast.js                           # Non-blocking reactive notifications
 │
 └── agrin-project/                             # AgriN Intelligent Backend & Knowledge Base
     ├── backend/
@@ -366,14 +361,6 @@ curl -X POST http://localhost:5000/api/v1/diagnoses \
 }
 ```
 
-*When confidence $< 0.60$ (or noisy/non-leaf input):*
-```json
-{
-  "confidence": 0.4812,
-  "warning": "The model is not sufficiently confident. Please upload a clearer leaf image or consult an agricultural expert."
-}
-```
-
 ---
 
 ### 2. Automated Crop Advisory (`POST /api/v1/advisories`)
@@ -386,13 +373,15 @@ curl -X POST http://localhost:5000/api/v1/advisories \
     "latitude": 15.8281,
     "longitude": 78.0373,
     "location": "Kurnool, Andhra Pradesh",
-    "crop": "Groundnut"
+    "crop": "Groundnut",
+    "variety": "Kadiri-6",
+    "crop_stage": "flowering"
   }'
 ```
 
 ---
 
-### 3. Vernacular Localizer (`POST /api/v1/localizations`)
+### 3. Vernacular Localizer & Crop Q&A (`POST /api/v1/localizations`)
 Synthesizes conversational, audio-ready vernacular briefings via Anthropic Claude 3.5 in **Telugu (`te`)**, **Hindi (`hi`)**, and **English (`en`)**:
 
 ```bash
@@ -400,7 +389,9 @@ curl -X POST http://localhost:5000/api/v1/localizations \
   -H "Content-Type: application/json" \
   -d '{
     "language": "te",
-    "query": "నా వేరుశనగ పంటలో ఆకు మచ్చలు ఉన్నాయి, ఏమి చేయాలి?"
+    "query": "పత్తిలో గులాబీ రంగు పురుగు నివారణ ఎలా?",
+    "crop": "Cotton",
+    "crop_stage": "flowering"
   }'
 ```
 
@@ -423,7 +414,7 @@ python -m pytest tests/ -v
 | [`test_v1_api.py`](agrin-project/backend/tests/test_v1_api.py) | Full REST v1 API contracts, health, CORS, telemetry, error formats | ✅ PASSED (16/16) |
 | [`test_audit_fixes.py`](agrin-project/backend/tests/test_audit_fixes.py) | Transparency audit, weights status reporting, regenerative scoring | ✅ PASSED (8/8) |
 | [`test_advisory.py`](agrin-project/backend/tests/test_advisory.py) | Rules engine, parameter parsing, recommendation ranking | ✅ PASSED (9/9) |
-| [`test_diagnosis.py`](agrin-project/backend/tests/test_diagnosis.py) | Computer vision engine & pathology resolution | ✅ PASSED (8/8) |
+| [`test_diagnosis.py`](agrin-project/backend/tests/test_diagnosis.py) | Computer vision pipeline tests | ✅ PASSED (8/8) |
 | [`test_live_sources.py`](agrin-project/backend/tests/test_live_sources.py) | Live Open-Meteo, SoilGrids, and Sentinel NDVI ingestion | ✅ PASSED (10/10) |
 | [`test_llm_advisory.py`](agrin-project/backend/tests/test_llm_advisory.py) | Claude prompt formation, language fallback, ML context pass | ✅ PASSED (11/11) |
 

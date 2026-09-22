@@ -87,7 +87,13 @@ def main():
     try:
         while True:
             time.sleep(1)
-            if backend_proc.poll() is not None or frontend_proc.poll() is not None:
+            b_code = backend_proc.poll()
+            f_code = frontend_proc.poll()
+            if b_code is not None:
+                print(f"\n⚠️ Flask backend stopped unexpectedly (exit code {b_code}).")
+                break
+            if f_code is not None:
+                print(f"\n⚠️ Frontend dev server stopped unexpectedly (exit code {f_code}).")
                 break
     except KeyboardInterrupt:
         print("\nStopping AgriBridge servers...")
