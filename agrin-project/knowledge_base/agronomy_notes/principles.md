@@ -1,6 +1,6 @@
-# AgriN Knowledge Base: Agronomy & Regenerative Agriculture Notes
+# AgriN Knowledge Base: Agronomy & Regenerative Agriculture Guidelines
 
-This directory stores agronomy reference documentation, regional crop suitability matrices, and ecological regeneration practices for emerging economies (BRICS Cooperation context).
+This document provides agronomic reference guidelines, regional crop suitability matrices, and ecological regeneration practices for smallholder farmers within the BRICS agricultural cooperation framework.
 
 ## Core Regenerative Agriculture Principles
 
