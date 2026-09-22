@@ -7,6 +7,8 @@ import { showToast } from '../components/Toast.js';
 export function renderAdvisoryPage(container) {
   let activeFilter = 'all';
   let advisories = [];
+  let isLoading = true;
+  let loadError = null;
 
   const categories = [
     { key: 'all', labelKey: 'advisory.categoryAll' },
@@ -17,11 +19,83 @@ export function renderAdvisoryPage(container) {
   ];
 
   async function loadData() {
-    advisories = await advisoryService.getAdvisories(activeFilter);
-    render();
+    isLoading = true;
+    loadError = null;
+    renderSkeleton();
+    try {
+      advisories = await advisoryService.getAdvisories(activeFilter);
+      if (!advisories || advisories.length === 0) {
+        // Fetch unfiltered if filtered empty
+        advisories = await advisoryService.getAdvisories('all');
+      }
+    } catch (err) {
+      console.warn("Advisories fetch error:", err);
+      loadError = "Couldn't reach live advisory recommendations — showing cached agronomic guidelines";
+      try {
+        advisories = await advisoryService.getAdvisories('all');
+      } catch (e) {
+        advisories = [];
+      }
+    } finally {
+      isLoading = false;
+      render();
+    }
+  }
+
+  function renderSkeleton() {
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+        <!-- Page Header Skeleton -->
+        <div>
+          <div class="skeleton skeleton-title" style="width: 240px; height: 1.8rem;"></div>
+          <div class="skeleton skeleton-text" style="width: 340px;"></div>
+        </div>
+
+        <div class="dashboard-columns">
+          <!-- Left Column: Skeleton Filter Chips & Cards -->
+          <div>
+            <div class="advisory-filters" style="margin-bottom: var(--space-4);">
+              <div class="skeleton" style="width: 70px; height: 32px; border-radius: var(--radius-full);"></div>
+              <div class="skeleton" style="width: 85px; height: 32px; border-radius: var(--radius-full);"></div>
+              <div class="skeleton" style="width: 95px; height: 32px; border-radius: var(--radius-full);"></div>
+              <div class="skeleton" style="width: 80px; height: 32px; border-radius: var(--radius-full);"></div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+              <div class="card card--default" style="min-height: 140px;">
+                <div class="skeleton skeleton-title" style="width: 50%;"></div>
+                <div class="skeleton skeleton-text" style="width: 90%;"></div>
+                <div class="skeleton skeleton-text" style="width: 75%;"></div>
+              </div>
+              <div class="card card--default" style="min-height: 140px;">
+                <div class="skeleton skeleton-title" style="width: 60%;"></div>
+                <div class="skeleton skeleton-text" style="width: 85%;"></div>
+                <div class="skeleton skeleton-text" style="width: 70%;"></div>
+              </div>
+              <div class="card card--default" style="min-height: 140px;">
+                <div class="skeleton skeleton-title" style="width: 45%;"></div>
+                <div class="skeleton skeleton-text" style="width: 80%;"></div>
+                <div class="skeleton skeleton-text" style="width: 65%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Chatbot container placeholder -->
+          <div id="chatbot-container"></div>
+        </div>
+      </div>
+    `;
+    const chatContainer = container.querySelector('#chatbot-container');
+    if (chatContainer) {
+      renderChatBot(chatContainer);
+    }
   }
 
   function render() {
+    const locale = getLocale();
+    const isTe = locale === 'te';
+    const isHi = locale === 'hi';
+
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: var(--space-6);">
         <!-- Page Header -->
@@ -29,6 +103,19 @@ export function renderAdvisoryPage(container) {
           <h2 style="color: var(--color-primary-900);">${t('advisory.title')}</h2>
           <p style="font-size: 0.88rem; color: var(--text-muted);">${t('advisory.subtitle')}</p>
         </div>
+
+        <!-- Error State Banner (Task 3) -->
+        ${loadError ? `
+          <div class="error-state-card" role="alert">
+            <div class="error-state-msg">
+              <span style="font-size: 1.2rem;">💡</span>
+              <span><strong>Notice:</strong> ${loadError}</span>
+            </div>
+            <button id="btn-advisory-retry" class="btn-retry" aria-label="Retry loading advisories">
+              🔄 ${isTe ? 'మళ్ళీ ప్రయత్నించండి' : (isHi ? 'पुनः प्रयास करें' : 'Retry')}
+            </button>
+          </div>
+        ` : ''}
 
         <div class="dashboard-columns">
           <!-- Left Column: Advisory Cards & Filters -->
@@ -92,6 +179,13 @@ export function renderAdvisoryPage(container) {
         }
       });
     });
+
+    const retryBtn = container.querySelector('#btn-advisory-retry');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        loadData();
+      });
+    }
   }
 
   loadData();

@@ -31,13 +31,13 @@ export function renderHeader(container, { farm, onMenuToggle, onNavigate }) {
       <div class="header-right">
         <!-- Language Switcher -->
         <div class="lang-selector" role="group" aria-label="Language selection">
-          <button id="lang-btn-en" class="lang-btn ${currentLocale === 'en' ? 'active' : ''}">
+          <button id="lang-btn-en" class="lang-btn ${currentLocale === 'en' ? 'active' : ''}" aria-label="Switch language to English" aria-pressed="${currentLocale === 'en'}">
             English
           </button>
-          <button id="lang-btn-hi" class="lang-btn ${currentLocale === 'hi' ? 'active' : ''}">
+          <button id="lang-btn-hi" class="lang-btn ${currentLocale === 'hi' ? 'active' : ''}" aria-label="भाषा हिन्दी में बदलें (Switch to Hindi)" aria-pressed="${currentLocale === 'hi'}">
             हिन्दी
           </button>
-          <button id="lang-btn-te" class="lang-btn ${currentLocale === 'te' ? 'active' : ''}">
+          <button id="lang-btn-te" class="lang-btn ${currentLocale === 'te' ? 'active' : ''}" aria-label="భాష తెలుగుకి మార్చండి (Switch to Telugu)" aria-pressed="${currentLocale === 'te'}">
             తెలుగు
           </button>
         </div>

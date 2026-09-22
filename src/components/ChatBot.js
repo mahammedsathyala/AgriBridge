@@ -75,9 +75,10 @@ export function renderChatBot(container) {
             id="chat-user-input" 
             class="chat-input" 
             placeholder="${t('advisory.chatPlaceholder')}" 
+            aria-label="${t('advisory.chatPlaceholder')}"
             autocomplete="off"
           />
-          <button type="submit" class="btn btn-primary btn-sm" style="padding: 0 16px;">
+          <button type="submit" class="btn btn-primary btn-sm" style="padding: 0 16px;" aria-label="${t('advisory.send')}">
             ${t('advisory.send')}
           </button>
         </form>

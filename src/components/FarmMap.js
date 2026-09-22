@@ -36,20 +36,20 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite', 
           <!-- Layer Switcher -->
           <div style="display: flex; gap: var(--space-2); align-items: center;">
             <div class="chart-filters">
-              <button id="layer-sat-btn" class="chart-filter-btn ${activeLayer === 'satellite' ? 'active' : ''}">
+              <button id="layer-sat-btn" class="chart-filter-btn ${activeLayer === 'satellite' ? 'active' : ''}" aria-label="${t('farm.layerSatellite')} View" aria-pressed="${activeLayer === 'satellite'}">
                 🛰️ ${t('farm.layerSatellite')}
               </button>
-              <button id="layer-ndvi-btn" class="chart-filter-btn ${activeLayer === 'ndvi' ? 'active' : ''}">
+              <button id="layer-ndvi-btn" class="chart-filter-btn ${activeLayer === 'ndvi' ? 'active' : ''}" aria-label="${t('farm.layerNdvi')} Vegetation Health View" aria-pressed="${activeLayer === 'ndvi'}">
                 🟢 ${t('farm.layerNdvi')}
               </button>
             </div>
 
             <!-- Zoom Controls -->
             <div style="display: flex; gap: 2px;">
-              <button id="btn-zoom-in" class="btn btn-secondary btn-sm" title="${t('farm.zoomIn')}" aria-label="Zoom In">
+              <button id="btn-zoom-in" class="btn btn-secondary btn-sm" title="${t('farm.zoomIn')}" aria-label="Zoom in on map">
                 +
               </button>
-              <button id="btn-zoom-out" class="btn btn-secondary btn-sm" title="${t('farm.zoomOut')}" aria-label="Zoom Out">
+              <button id="btn-zoom-out" class="btn btn-secondary btn-sm" title="${t('farm.zoomOut')}" aria-label="Zoom out on map">
                 −
               </button>
             </div>
@@ -57,15 +57,22 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite', 
         </div>
 
         <!-- SVG Map Viewport -->
-        <div style="position: relative; width: 100%; height: 320px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-medium); background: #1c2e24;">
-          <svg id="farm-map-svg" viewBox="${vbX} ${vbY} ${vbWidth} ${vbHeight}" style="width: 100%; height: 100%; display: block; cursor: crosshair; user-select: none;">
+        <div style="position: relative; width: 100%; height: 320px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-medium); background: #081c15;">
+          <svg id="farm-map-svg" viewBox="${vbX} ${vbY} ${vbWidth} ${vbHeight}" style="width: 100%; height: 100%; display: block; cursor: crosshair; user-select: none;" role="img" aria-label="Interactive Farm Boundary Map of ${farm.farmName || 'Sathyala Farm'}">
             <defs>
               <!-- Satellite Terrain Pattern -->
               <linearGradient id="satGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#2d4a34" />
                 <stop offset="50%" stop-color="#3d5a42" />
-                <stop offset="100%" stop-color="#243828" />
+                <stop offset="100%" stop-color="#1b4332" />
               </linearGradient>
+
+              <!-- Radial Depth Vignette with primary-800 (#1b4332) & primary-900 (#081c15) -->
+              <radialGradient id="mapVignetteGrad" cx="50%" cy="50%" r="65%">
+                <stop offset="0%" stop-color="#2d6a4f" stop-opacity="0.1" />
+                <stop offset="60%" stop-color="#1b4332" stop-opacity="0.45" />
+                <stop offset="100%" stop-color="#081c15" stop-opacity="0.85" />
+              </radialGradient>
 
               <!-- NDVI Infrared Heatmap Gradient -->
               <linearGradient id="ndviGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -83,6 +90,9 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite', 
             <!-- Base Canvas / Terrain Background -->
             <rect width="600" height="360" fill="url(#satGrad)" />
             <rect width="600" height="360" fill="url(#fieldLines)" />
+
+            <!-- Radial Depth Vignette Overlay (Task 4) -->
+            <rect width="600" height="360" fill="url(#mapVignetteGrad)" />
 
             <!-- Rural Road / Canal Waterway -->
             <path d="M 0 120 Q 200 150 400 90 T 600 130" fill="none" stroke="#6c584c" stroke-width="8" opacity="0.6" />
@@ -105,27 +115,27 @@ export function renderFarmMap(container, { farm, zoom = 1, layer = 'satellite', 
               stroke-dasharray="6 3"
             />
 
-            <!-- Crop Rows within plot -->
-            <line x1="190" y1="160" x2="330" y2="150" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
-            <line x1="188" y1="185" x2="328" y2="175" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
-            <line x1="185" y1="210" x2="325" y2="200" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
-            <line x1="182" y1="235" x2="322" y2="225" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
-            <line x1="180" y1="260" x2="320" y2="250" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
+            <!-- Crop Rows within plot with subtle shading -->
+            <line x1="190" y1="160" x2="330" y2="150" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" />
+            <line x1="188" y1="185" x2="328" y2="175" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" />
+            <line x1="185" y1="210" x2="325" y2="200" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" />
+            <line x1="182" y1="235" x2="322" y2="225" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" />
+            <line x1="180" y1="260" x2="320" y2="250" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" />
 
-            <!-- Farm Center Pin & Tag (Draggable & Clickable) -->
-            <g id="farm-center-pin" transform="translate(${pinX}, ${pinY})" style="cursor: grab;">
-              <circle cx="0" cy="0" r="14" fill="rgba(220, 38, 38, 0.25)" class="pulse-circle" />
+            <!-- Farm Center Pin & Live Status Pulse (Task 4) -->
+            <g id="farm-center-pin" transform="translate(${pinX}, ${pinY})" style="cursor: grab;" tabindex="0" role="button" aria-label="Farm marker: ${farm.farmName || 'Sathyala Farm'}. Drag or click to relocate">
+              <circle cx="0" cy="0" r="14" fill="rgba(220, 38, 38, 0.35)" class="live-map-marker" />
               <circle cx="0" cy="0" r="7" fill="#dc2626" stroke="#ffffff" stroke-width="2" />
               <path d="M 0 0 L 0 -12" stroke="#dc2626" stroke-width="2" />
-              <rect x="-42" y="-36" width="84" height="20" rx="4" fill="rgba(0,0,0,0.85)" />
+              <rect x="-42" y="-36" width="84" height="20" rx="4" fill="rgba(8, 28, 21, 0.92)" stroke="rgba(255,255,255,0.18)" stroke-width="0.8" />
               <text x="0" y="-22" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="bold">
                 ${farm.farmName || 'Sathyala Farm'}
               </text>
             </g>
 
             <!-- IoT Sensor Node Marker -->
-            <g transform="translate(215, 175)">
-              <circle cx="0" cy="0" r="10" fill="rgba(0, 119, 182, 0.3)" class="pulse-circle" />
+            <g transform="translate(215, 175)" tabindex="0" role="img" aria-label="IoT Sensor Node AGRI-ESP32-001 Location">
+              <circle cx="0" cy="0" r="10" fill="rgba(0, 119, 182, 0.35)" class="pulse-circle" />
               <circle cx="0" cy="0" r="5" fill="#0077b6" stroke="#ffffff" stroke-width="1.5" />
               <text x="8" y="4" fill="#ffffff" font-size="8" font-weight="bold" filter="drop-shadow(0 1px 1px black)">
                 ESP32 Node

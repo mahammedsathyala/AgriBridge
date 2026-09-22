@@ -20,10 +20,59 @@ export const CROPS_CATALOG = [
 export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
   let isEditing = false;
   let isSyncing = false;
+  let isLoading = false;
+  let loadError = null;
   let currentFarm = { ...farm };
   let sensorData = { ...farm.sensorNode };
 
+  async function reloadFarmTelemetry() {
+    isLoading = true;
+    loadError = null;
+    renderSkeleton();
+    try {
+      const freshFarm = await farmService.getFarmProfile();
+      if (freshFarm) {
+        currentFarm = freshFarm;
+        sensorData = { ...freshFarm.sensorNode };
+      }
+      const freshSensor = await sensorService.syncTelemetry();
+      if (freshSensor) {
+        sensorData = freshSensor;
+      }
+    } catch (err) {
+      console.warn("Farm telemetry reload failed:", err);
+      loadError = "Couldn't sync latest farm parcel telemetry — showing saved profile";
+    } finally {
+      isLoading = false;
+      render();
+    }
+  }
+
+  function renderSkeleton() {
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div class="skeleton skeleton-title" style="width: 220px; height: 1.8rem;"></div>
+            <div class="skeleton skeleton-text" style="width: 300px;"></div>
+          </div>
+          <div class="skeleton" style="width: 110px; height: 36px; border-radius: var(--radius-md);"></div>
+        </div>
+
+        <!-- Skeleton Map Viewport -->
+        <div class="skeleton" style="width: 100%; height: 380px; border-radius: var(--radius-lg);"></div>
+
+        <!-- 2-Column Details & Sensor Skeleton -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6);">
+          <div class="card card--primary skeleton" style="height: 280px;"></div>
+          <div class="card card--default skeleton" style="height: 280px;"></div>
+        </div>
+      </div>
+    `;
+  }
+
   function render() {
+    if (isLoading) return renderSkeleton();
     const locale = getLocale();
     const isTe = locale === 'te';
     const isHi = locale === 'hi';
@@ -39,18 +88,31 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
             <p style="font-size: 0.88rem; color: var(--text-muted);">${t('farm.subtitle')}</p>
           </div>
 
-          <button id="btn-edit-farm" class="btn btn-primary btn-sm">
+          <button id="btn-edit-farm" class="btn btn-primary btn-sm" aria-label="${t('farm.editFarm')}">
             ✏️ ${t('farm.editFarm')}
           </button>
         </div>
+
+        <!-- Error State Banner (Task 3) -->
+        ${loadError ? `
+          <div class="error-state-card" role="alert">
+            <div class="error-state-msg">
+              <span style="font-size: 1.2rem;">📡</span>
+              <span><strong>Notice:</strong> ${loadError}</span>
+            </div>
+            <button id="btn-farm-retry" class="btn-retry" aria-label="Retry syncing farm telemetry">
+              🔄 ${isTe ? 'మళ్ళీ ప్రయత్నించండి' : (isHi ? 'पुनः प्रयास करें' : 'Retry')}
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Interactive Map Panel -->
         <div id="farm-map-container"></div>
 
         <!-- 2-Column: Plot Details & IoT Sensor Section -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6);">
-          <!-- Plot Details Card -->
-          <div class="card">
+          <!-- Plot Details Card (Primary Profile Content) -->
+          <div class="card card--primary">
             <div class="card-header">
               <div class="card-title">
                 <span>📋</span>
@@ -117,8 +179,8 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
             </div>
           </div>
 
-          <!-- Connect Sensor Section -->
-          <div class="card">
+          <!-- Connect Sensor Section (Secondary / Default) -->
+          <div class="card card--default">
             <div class="card-header">
               <div class="card-title">
                 <span>📡</span>
@@ -128,7 +190,7 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
             </div>
 
             <div style="display: flex; flex-direction: column; gap: var(--space-4);">
-              <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); padding: var(--space-3); border-radius: var(--radius-md);">
+              <div class="card--compact" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); border-radius: var(--radius-md);">
                 <div>
                   <div style="font-size: 0.75rem; color: var(--text-muted);">${t('farm.deviceId')}</div>
                   <div style="font-family: monospace; font-weight: 800; color: var(--color-primary-900); font-size: 1.05rem;">
@@ -144,9 +206,9 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
                 </div>
               </div>
 
-              <!-- Sensor Metrics Grid -->
+              <!-- Sensor Metrics Grid (Dense compact telemetry tiles) -->
               <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); text-align: center;">
-                <div style="background: var(--color-sky-50); border: 1px solid var(--color-sky-100); padding: var(--space-3); border-radius: var(--radius-md);">
+                <div class="card--compact" style="background: var(--color-sky-50); border: 1px solid var(--color-sky-100); border-radius: var(--radius-md);">
                   <div style="font-size: 0.72rem; color: var(--color-sky-800); font-weight: 600;">${t('farm.sensorMoisture')}</div>
                   <div style="font-size: 1.4rem; font-weight: 800; color: var(--color-sky-700); margin: 2px 0;">
                     ${sensorData.soilMoisture}%
@@ -154,7 +216,7 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
                   <div style="font-size: 0.65rem; color: var(--text-muted);">Optimal: 30-45%</div>
                 </div>
 
-                <div style="background: var(--color-amber-50); border: 1px solid var(--color-amber-100); padding: var(--space-3); border-radius: var(--radius-md);">
+                <div class="card--compact" style="background: var(--color-amber-50); border: 1px solid var(--color-amber-100); border-radius: var(--radius-md);">
                   <div style="font-size: 0.72rem; color: var(--color-amber-800); font-weight: 600;">${t('farm.sensorTemp')}</div>
                   <div style="font-size: 1.4rem; font-weight: 800; color: var(--color-amber-700); margin: 2px 0;">
                     ${sensorData.soilTemp}°C
@@ -162,7 +224,7 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
                   <div style="font-size: 0.65rem; color: var(--text-muted);">Root zone 15cm</div>
                 </div>
 
-                <div style="background: var(--color-primary-50); border: 1px solid var(--color-primary-100); padding: var(--space-3); border-radius: var(--radius-md);">
+                <div class="card--compact" style="background: var(--color-primary-50); border: 1px solid var(--color-primary-100); border-radius: var(--radius-md);">
                   <div style="font-size: 0.72rem; color: var(--color-primary-800); font-weight: 600;">${t('farm.sensorHumidity')}</div>
                   <div style="font-size: 1.4rem; font-weight: 800; color: var(--color-primary-700); margin: 2px 0;">
                     ${sensorData.humidity}%
@@ -188,7 +250,7 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
         ${isEditing ? `
           <div class="modal-overlay" id="edit-farm-modal">
             <div class="modal-dialog">
-              <button id="modal-close-x" class="modal-close-btn">✕</button>
+              <button id="modal-close-x" class="modal-close-btn" aria-label="Close modal">✕</button>
               <h3 style="color: var(--color-primary-900); margin-bottom: var(--space-4);">
                 ✏️ ${t('farm.editFarm')}
               </h3>
@@ -457,6 +519,11 @@ export function renderMyFarmPage(container, { farm, onFarmUpdated }) {
         render();
         showToast("Sensor sync failed", "error");
       }
+    });
+
+    // Attach Retry listener
+    container.querySelector('#btn-farm-retry')?.addEventListener('click', () => {
+      reloadFarmTelemetry();
     });
   }
 
